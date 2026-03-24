@@ -3,12 +3,12 @@ package dbcon
 import "github.com/bobllor/cloud-project/src/file"
 
 type FilesDB struct {
-	Inquirier DBInquirer
+	inquirer DBInquirer
 }
 
 func NewFilesDatabase(inquirer DBInquirer) *FilesDB {
 	f := &FilesDB{
-		Inquirier: inquirer,
+		inquirer: inquirer,
 	}
 
 	return f
@@ -21,7 +21,7 @@ func (f *FilesDB) QueryFiles() ([]file.File, error) {
 	files := []file.File{}
 
 	// TODO: add WHERE filter with user ID when added
-	q, err := f.Inquirier.Query(`SELECT 
+	q, err := f.inquirer.Query(`SELECT 
 		FileName, FileType, FileID, Extension, FilePath, FileSize 
 		FROM Files`,
 	)
