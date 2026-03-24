@@ -1,0 +1,10 @@
+# folders
+storage
+db
+
+# files
+*.yml
+*.YML
+*.yaml
+*.YAML
+.env
