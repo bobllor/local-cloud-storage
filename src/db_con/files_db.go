@@ -1,14 +1,19 @@
 package dbcon
 
-import "github.com/bobllor/cloud-project/src/file"
+import (
+	"database/sql"
+	"fmt"
+
+	"github.com/bobllor/cloud-project/src/file"
+)
 
 type FilesDB struct {
-	inquirer DBInquirer
+	database *sql.DB
 }
 
-func NewFilesDatabase(inquirer DBInquirer) *FilesDB {
+func NewFilesDatabase(database *sql.DB) *FilesDB {
 	f := &FilesDB{
-		inquirer: inquirer,
+		database: database,
 	}
 
 	return f
@@ -21,7 +26,7 @@ func (f *FilesDB) QueryFiles() ([]file.File, error) {
 	files := []file.File{}
 
 	// TODO: add WHERE filter with user ID when added
-	q, err := f.inquirer.Query(`SELECT 
+	q, err := f.database.Query(`SELECT 
 		FileName, FileType, FileID, Extension, FilePath, FileSize 
 		FROM Files`,
 	)
@@ -41,4 +46,13 @@ func (f *FilesDB) QueryFiles() ([]file.File, error) {
 	}
 
 	return files, nil
+}
+
+func (f *FilesDB) AddFile() error {
+	_, err := f.database.Begin()
+	if err != nil {
+		return fmt.Errorf("failed to start transaction: %v", err)
+	}
+
+	return nil
 }

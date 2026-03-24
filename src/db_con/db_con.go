@@ -1,22 +1,10 @@
 package dbcon
 
 import (
-	"context"
 	"database/sql"
 
 	"github.com/go-sql-driver/mysql"
 )
-
-type DB interface {
-	Query(query string, args ...any) (*sql.Rows, error)
-	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
-	QueryRow(query string, args ...any) *sql.Row
-	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
-	Exec(query string, args ...any) (sql.Result, error)
-	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
-	Begin() (*sql.Tx, error)
-	BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error)
-}
 
 // NewDatabase opens the SQL database and returns a [sql.DB].
 // It will return an error if any errors occur.
