@@ -48,11 +48,12 @@ func (f *FilesDB) QueryFiles() ([]file.File, error) {
 	return files, nil
 }
 
-func (f *FilesDB) AddFile() error {
-	_, err := f.database.Begin()
+func (f *FilesDB) AddFile(files ...file.File) error {
+	tx, err := f.database.Begin()
 	if err != nil {
 		return fmt.Errorf("failed to start transaction: %v", err)
 	}
+	defer tx.Rollback()
 
 	return nil
 }
