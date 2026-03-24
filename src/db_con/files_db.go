@@ -55,5 +55,11 @@ func (f *FilesDB) AddFile(files ...file.File) error {
 	}
 	defer tx.Rollback()
 
+	query := "INSERT INTO Files VALUES "
+	_, err = tx.Exec(query)
+	if err != nil {
+		return fmt.Errorf("failed to insert into files table: %v", err)
+	}
+
 	return nil
 }
