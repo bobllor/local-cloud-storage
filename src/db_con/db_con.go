@@ -46,13 +46,13 @@ func QueryParamBuilder(paramSize int, repeat int) string {
 	questions := []string{}
 	out := []string{}
 
-	for _ = range paramSize {
+	for range paramSize {
 		questions = append(questions, "?")
 	}
 
 	param := "(" + strings.Join(questions, ",") + ")"
 
-	for _ = range repeat {
+	for range repeat {
 		out = append(out, param)
 	}
 
