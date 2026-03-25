@@ -1,18 +1,17 @@
-package tests
+package dbcon
 
 import (
 	"strings"
 	"testing"
 
 	"github.com/bobllor/assert"
-	dbcon "github.com/bobllor/cloud-project/src/db_con"
 )
 
 func TestQueryParamBuilder(t *testing.T) {
 	params := 8
 	repeat := 3
 
-	query := dbcon.QueryParamBuilder(params, repeat)
+	query := QueryParamBuilder(params, repeat)
 	querySplit := strings.Split(query, ")")
 
 	// has to subtract -1 due to an invisible string at the end.
