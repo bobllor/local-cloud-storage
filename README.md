@@ -1,6 +1,6 @@
 # About
 
-This is a for fun project of mine that mimics a cloud storage, used primarily
+This is a for fun project of mine that is a simple clone of cloud storages, used primarily
 for learning how the all the systems interacts with each other: front end, back end,
 network, security, authentication, and more.
 
