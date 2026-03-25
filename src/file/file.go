@@ -2,11 +2,16 @@ package file
 
 import (
 	"os"
-	"path"
 	"path/filepath"
 	"time"
 
 	"github.com/google/uuid"
+)
+
+const (
+	// FileColumnSize is the amount of columns used for the Files table.
+	// It is equal to the public fields of the [File] struct.
+	FileColumnSize int = 9
 )
 
 type File struct {
@@ -25,10 +30,6 @@ type File struct {
 	// This can be nil, meaning it resides in the root folder.
 	ParentID *string
 
-	// Ext is the file extension. This includes the final dot of
-	// the extension. It will be an empty string if no extension is given.
-	Ext string
-
 	// Path is the absolute path to the file on the disk. This is intended
 	// for the backend use only.
 	Path string
@@ -36,14 +37,17 @@ type File struct {
 	// Size is the size of the file.
 	Size int64
 
-	// Modified is the most recent time the file has been modified. This
+	// ModifiedTime is the most recent time the file has been modified. This
 	// will be the most recent time of change or when it was first created.
-	Modified time.Time
+	ModifiedTime time.Time
 
-	// DeleteTime is the time when the file is set to deleted. The acutal
+	// DeletedOn is the time when the file is set to be deleted. The acutal
 	// deletion occurs after a certain amount of time has passed
 	// since the marked deletion time. This value can be nil.
-	DeleteTime *time.Time
+	DeletedOn *time.Time
+
+	// OwnerID is the ID of the owner of the file.
+	AccountID string
 }
 
 // Read returns a File slice for all files found in root.
@@ -73,6 +77,10 @@ func walk(root string) ([]File, error) {
 		root: nil,
 	}
 
+	// folder name of root is the account ID
+	// this only is applicable to local files
+	accountID := filepath.Base(root)
+
 	walkFunc := func(p string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -100,14 +108,14 @@ func walk(root string) ([]File, error) {
 			}
 
 			f := File{
-				Name:     info.Name(),
-				Type:     fileType,
-				Size:     info.Size(),
-				Ext:      path.Ext(p),
-				Path:     p,
-				FileID:   id,
-				ParentID: parentID,
-				Modified: info.ModTime(),
+				Name:         info.Name(),
+				Type:         fileType,
+				Size:         info.Size(),
+				Path:         p,
+				FileID:       id,
+				ParentID:     parentID,
+				ModifiedTime: info.ModTime(),
+				AccountID:    accountID,
 			}
 
 			fs = append(fs, f)
@@ -122,4 +130,28 @@ func walk(root string) ([]File, error) {
 	}
 
 	return fs, nil
+}
+
+// FlattenFiles flattens the a slice of [File] structs to prepare for use in
+// a query.
+func FlattenFile(files ...File) []any {
+	out := []any{}
+
+	appendFunc := func(v any) {
+		out = append(out, v)
+	}
+
+	for _, file := range files {
+		appendFunc(file.AccountID)
+		appendFunc(file.Name)
+		appendFunc(file.Type)
+		appendFunc(file.FileID)
+		appendFunc(file.ParentID)
+		appendFunc(file.Path)
+		appendFunc(file.Size)
+		appendFunc(file.ModifiedTime)
+		appendFunc(file.DeletedOn)
+	}
+
+	return out
 }
