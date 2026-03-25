@@ -2,6 +2,7 @@ package dbcon
 
 import (
 	"database/sql"
+	"strings"
 
 	"github.com/go-sql-driver/mysql"
 )
@@ -37,4 +38,23 @@ func NewConfig(user string, passwd string, net string, addr string, dbName strin
 	c.AllowNativePasswords = true
 
 	return c
+}
+
+// QueryParamBuilder builds the value parameters for queries to pass
+// arguments into.
+func QueryParamBuilder(paramSize int, repeat int) string {
+	questions := []string{}
+	out := []string{}
+
+	for range paramSize {
+		questions = append(questions, "?")
+	}
+
+	param := "(" + strings.Join(questions, ",") + ")"
+
+	for range repeat {
+		out = append(out, param)
+	}
+
+	return strings.Join(out, ",")
 }

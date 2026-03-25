@@ -1,4 +1,4 @@
-package tests
+package file
 
 import (
 	"math/rand"
@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/bobllor/assert"
-	"github.com/bobllor/cloud-project/src/file"
 )
 
 func TestRead(t *testing.T) {
@@ -18,7 +17,7 @@ func TestRead(t *testing.T) {
 	_, err := createFiles(dir)
 	assert.Nil(t, err)
 
-	files, err := file.Read(dir)
+	files, err := Read(dir)
 	assert.Nil(t, err)
 	assert.NotEqual(t, len(files), 0)
 
@@ -34,16 +33,16 @@ func TestReadParentIdFolders(t *testing.T) {
 	_, err := createFiles(dir)
 	assert.Nil(t, err)
 
-	files, err := file.Read(dir)
+	files, err := Read(dir)
 	assert.Nil(t, err)
 	assert.NotEqual(t, len(files), 0)
 
 	// a map of the parents [Dir(File.FilePath)]-[File] of
 	// the files
-	parentMap := map[string]file.File{}
+	parentMap := map[string]File{}
 	// flat map of [File.FileID]-[File] for all
 	// the files
-	fileIdMap := map[string]file.File{}
+	fileIdMap := map[string]File{}
 
 	for _, file := range files {
 		_, err := os.Stat(file.Path)
@@ -82,8 +81,16 @@ func TestReadParentIdFolders(t *testing.T) {
 }
 
 func TestFailRead(t *testing.T) {
-	_, err := file.Read("dir/does/not/exist")
+	_, err := Read("dir/does/not/exist")
 	assert.NotNil(t, err)
+}
+
+func TestFlattenFile(t *testing.T) {
+	f := File{}
+
+	flattened := FlattenFile(f)
+
+	assert.Equal(t, FileColumnSize, len(flattened))
 }
 
 // createFiles creates random files in the root. It will return
