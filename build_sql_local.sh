@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
-# NOTE: this does require sudo.
+# Builds the database locally, it creates the tables and users
+# needed for the database.
+# If Docker is preferred, read the Docker documentation.
 
 sql(){
     sudo mysql -v -e "$1"
@@ -13,10 +15,10 @@ sql_silent(){
 set -e
 
 env=".env"
-sql_script_path="sql/db_setup.sql"
+sql_script_path="sql/01.db_setup.sql"
 
 if [[ ! -e "$env" ]]; then
-    echo ".env file required"
+    echo "error: $env not found"
     exit 1
 fi
 
