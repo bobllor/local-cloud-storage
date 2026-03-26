@@ -1,0 +1,12 @@
+services:
+  master-db:
+    container_name: master-db
+    image: lcs:master-db.latest
+    tty: true
+    stop_grace_period: 1s
+    build: 
+      dockerfile: "./docker/Dockerfile.db-build"
+    ports:
+      - "3306:3306"
+    env_file:
+      - .env
