@@ -15,16 +15,18 @@ import (
 // the UserAccount and File table by default.
 // As rows are added into the table, it will grow over the course of the test cases.
 // Be aware of it!
-//
-// The row in UserAccount uses the ID: 89672a64-f3ff-490c-8f2d-7e5cf5d4aa70
 
-var userAccountID = "89672a64-f3ff-490c-8f2d-7e5cf5d4aa70"
+// Variable of the default column data inserted into the test database on initialization.
+const (
+	testUserAccountID = "89672a64-f3ff-490c-8f2d-7e5cf5d4aa70"
+	testFileID        = "randomfileidhere"
+)
 
 func TestFileQuery(t *testing.T) {
 	fDb, err := getTestFileGateway()
 	assert.Nil(t, err)
 
-	files, err := fDb.QueryFile(userAccountID)
+	files, err := fDb.QueryFile(testUserAccountID)
 	assert.Nil(t, err)
 
 	assert.NotEqual(t, len(files), 0)
@@ -44,11 +46,36 @@ func TestAddFile(t *testing.T) {
 
 	// File.OwnerID is nil, this is changed to the existing account ID by default.
 	for i := range files {
-		files[i].OwnerID = userAccountID
+		files[i].OwnerID = testUserAccountID
 	}
 
 	err = fDb.AddFile(files)
 	assert.Nil(t, err)
+}
+
+func TestAddDuplicateFile(t *testing.T) {
+	fDb, err := getTestFileGateway()
+	assert.Nil(t, err)
+
+	f := file.File{
+		OwnerID: testUserAccountID,
+		FileID:  testFileID,
+	}
+
+	err = fDb.AddFile([]file.File{f})
+	assert.NotNil(t, err)
+}
+
+func TestAddMissingOwnerIDFile(t *testing.T) {
+	fDb, err := getTestFileGateway()
+	assert.Nil(t, err)
+
+	f := file.File{
+		FileID: "fdsa",
+	}
+
+	err = fDb.AddFile([]file.File{f})
+	assert.NotNil(t, err)
 }
 
 // getFileDb gets the [FileGateway] for the test database.
