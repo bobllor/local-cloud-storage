@@ -2,24 +2,13 @@
 
 set -e
 
-c_name="testdb"
-host_port="3307"
-c_port="3306"
-sql_path="./sql/scripts/00.testdb_setup.sql"
+source "./tools/support/testdb/sql_vars.sh"
+source "./tools/support/testdb/sql_utils.sh"
 
-# executes SQL commands
-sql(){
-    mariadb -h 127.0.0.1 -P $host_port -u root -e "$1"
-}
+container_status=$(check_container_status $c_name)
+declare -i max_attempts=7
 
-stop_container(){
-    docker container stop "$c_name" > /dev/null
-    docker container rm "$c_name" > /dev/null
-}
-
-container_exists=$(docker container ls | grep "$c_name" && echo true || echo false)
-
-if [[ "$container_exists" == "false" ]]; then
+if [[ "$container_status" == "false" ]]; then
     echo "Starting container $c_name"
 
     docker run --detach \
@@ -44,15 +33,11 @@ if [[ "$container_exists" == "false" ]]; then
 
     if [[ $init_status == false ]]; then
         echo "error: Failed to establish connection to server, stopping $c_name"
-        stop_container
+        stop_docker_container $c_name
         exit 1
     fi
 
     echo "Container $c_name started"
 else
-    echo "Stopping container $c_name..."
-
-    stop_container
-
-    echo "Container $c_name stopped"
+    echo "error: Container $c_name is already running"
 fi
