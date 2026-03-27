@@ -47,7 +47,7 @@ type File struct {
 	DeletedOn *time.Time
 
 	// OwnerID is the ID of the owner of the file.
-	AccountID string
+	OwnerID string
 }
 
 // Read returns a File slice for all files found in root.
@@ -115,7 +115,7 @@ func walk(root string) ([]File, error) {
 				FileID:       id,
 				ParentID:     parentID,
 				ModifiedTime: info.ModTime(),
-				AccountID:    accountID,
+				OwnerID:      accountID,
 			}
 
 			fs = append(fs, f)
@@ -142,7 +142,7 @@ func FlattenFile(files ...File) []any {
 	}
 
 	for _, file := range files {
-		appendFunc(file.AccountID)
+		appendFunc(file.OwnerID)
 		appendFunc(file.Name)
 		appendFunc(file.Type)
 		appendFunc(file.FileID)

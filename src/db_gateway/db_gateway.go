@@ -1,4 +1,4 @@
-package dbcon
+package dbgateway
 
 import (
 	"database/sql"

@@ -8,3 +8,7 @@ db
 *.yaml
 *.YAML
 .env
+
+# allow these files
+!docker/*
+!docker*

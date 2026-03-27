@@ -1,17 +1,17 @@
 package api
 
 import (
-	dbcon "github.com/bobllor/cloud-project/src/db_con"
+	dbcon "github.com/bobllor/cloud-project/src/db_gateway"
 )
 
 // DBAPI is used for handling API requests.
 type DBAPI struct {
-	FilesDB dbcon.FilesDB
+	FileGateway dbcon.FileGateway
 }
 
-func NewDBAPI(filesDB dbcon.FilesDB) *DBAPI {
+func NewDBAPI(fileGateWay dbcon.FileGateway) *DBAPI {
 	api := &DBAPI{
-		FilesDB: filesDB,
+		FileGateway: fileGateWay,
 	}
 
 	return api
