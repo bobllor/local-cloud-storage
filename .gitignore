@@ -7,7 +7,7 @@ db
 *.YML
 *.yaml
 *.YAML
-.env
+*.env
 
 # allow these files
 !docker/*
