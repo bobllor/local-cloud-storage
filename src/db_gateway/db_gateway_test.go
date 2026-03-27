@@ -19,3 +19,14 @@ func TestQueryParamBuilder(t *testing.T) {
 
 	assert.Equal(t, len(strings.Split(querySplit[0], ",")), params)
 }
+
+func TestSingleQueryParamBuilder(t *testing.T) {
+	params := 5
+	repeat := 1
+
+	query := QueryParamBuilder(params, repeat)
+	spl := strings.Split(query, ")")
+
+	assert.Equal(t, len(spl)-1, repeat)
+	assert.Equal(t, len(strings.Split(query, ",")), params)
+}
