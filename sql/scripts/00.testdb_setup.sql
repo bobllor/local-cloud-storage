@@ -32,5 +32,18 @@ INSERT INTO UserAccount
     ("89672a64-f3ff-490c-8f2d-7e5cf5d4aa70", 
     "test.username", 
     "3eb72b4431dff57dd10e76d0921d1787", 
-    GETDATE(), 
+    NOW(), 
     NULL);
+
+INSERT INTO File
+    VALUES
+    ("89672a64-f3ff-490c-8f2d-7e5cf5d4aa70",
+    "test1.txt",
+    "file",
+    "randomfileidhere",
+    NULL,
+    "/path/to/file",
+    1234,
+    NOW(),
+    NULL
+    );
