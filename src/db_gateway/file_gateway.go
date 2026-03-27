@@ -3,6 +3,7 @@ package dbgateway
 import (
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/bobllor/cloud-project/src/file"
 )
@@ -28,20 +29,51 @@ func NewFileGateway(database *sql.DB) *FileGateway {
 // QueryFile queries the File table and returns a File slice.
 // If an error occurs then it will return an error, and abort
 // the scanning process if it is occurring.
-func (f *FileGateway) QueryFile() ([]file.File, error) {
+func (f *FileGateway) QueryFile(fileOwnerID string) ([]file.File, error) {
 	files := []file.File{}
 
-	// TODO: add WHERE filter with user ID when added
-	query := fmt.Sprintf("SELECT FileName, FileType, FileID, FilePath, FileSize FROM %s", FileTable)
-	q, err := f.database.Query(query)
+	query := fmt.Sprintf("SELECT * FROM %s WHERE %s = ?", FileTable, file.FileOwnerIDCol)
+	q, err := f.database.Query(query, fileOwnerID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to query %s: %v", FileTable, err)
 	}
 
 	defer q.Close()
 	for q.Next() {
 		f := file.File{}
-		scanErr := q.Scan(&f.Name, &f.Type, &f.FileID, &f.Path, &f.Size)
+		modifiedTimeSl := make([]uint8, 0)
+		deletedTimeSl := make([]uint8, 0)
+		scanErr := q.Scan(
+			&f.OwnerID,
+			&f.Name,
+			&f.Type,
+			&f.FileID,
+			&f.ParentID,
+			&f.Path,
+			&f.Size,
+			&modifiedTimeSl,
+			&deletedTimeSl,
+		)
+
+		dateFormat := "2006-01-02"
+		modifiedDate, err := time.Parse(dateFormat, string(modifiedTimeSl))
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse %s column: %v", file.ModifiedDateCol, err)
+		}
+
+		var deletedDate *time.Time
+		if len(deletedTimeSl) > 0 {
+			dateTemp, err := time.Parse(dateFormat, string(deletedTimeSl))
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse %s column: %v", file.DeletedDateCol, err)
+			}
+
+			deletedDate = &dateTemp
+		}
+
+		f.ModifiedTime = modifiedDate
+		f.DeletedOn = deletedDate
+
 		if scanErr != nil {
 			return nil, scanErr
 		}
