@@ -55,7 +55,7 @@ func (f *FileGateway) QueryFile(fileOwnerID string) ([]file.File, error) {
 			&deletedTimeSl,
 		)
 
-		dateFormat := "2006-01-02"
+		dateFormat := time.DateTime
 		modifiedDate, err := time.Parse(dateFormat, string(modifiedTimeSl))
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse %s column: %v", file.ModifiedDateCol, err)
