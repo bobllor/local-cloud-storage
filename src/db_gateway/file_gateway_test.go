@@ -24,7 +24,7 @@ func TestFileQuery(t *testing.T) {
 	fDb, err := getTestFileGateway()
 	assert.Nil(t, err)
 
-	files, err := fDb.QueryFile()
+	files, err := fDb.QueryFile(userAccountID)
 	assert.Nil(t, err)
 
 	assert.NotEqual(t, len(files), 0)
