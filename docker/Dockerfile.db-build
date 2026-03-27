@@ -1,0 +1,11 @@
+FROM mariadb:lts AS master-db
+
+ARG DB_INIT="/docker-entrypoint-initdb.d"
+ARG PORT=3306
+
+EXPOSE ${PORT}
+
+COPY "./sql/01.db_setup.sql" "${DB_INIT}"
+COPY "./sql/02.build_sql_docker.sh" "${DB_INIT}"
+
+USER mysql
