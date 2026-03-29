@@ -15,7 +15,7 @@ if [[ "$container_status" == "false" ]]; then
         --name "$c_name" \
         -p "$host_port:$c_port" \
         --env MARIADB_ALLOW_EMPTY_ROOT_PASSWORD=1 \
-        mariadb:lts > /dev/null
+        mariadb:lts 2>&1
 
     init_status=false
     echo "Waiting for server connection..."

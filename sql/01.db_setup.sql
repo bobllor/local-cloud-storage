@@ -5,8 +5,8 @@ CREATE TABLE IF NOT EXISTS UserAccount(
     AccountID varchar(50),
     Username varchar(30) NOT NULL UNIQUE,
     PasswordHash varchar(255) NOT NULL,
-    CreatedDate DATE,
-    SeenDate DATE,
+    CreatedDate DATETIME,
+    SeenDate DATETIME,
     PRIMARY KEY (AccountID)
 );
 
@@ -18,8 +18,8 @@ CREATE TABLE IF NOT EXISTS File(
     ParentID varchar(255),
     FilePath varchar(5120),
     FileSize int,
-    ModifiedDate DATE,
-    DeletedDate DATE,
+    ModifiedDate DATETIME,
+    DeletedDate DATETIME,
     PRIMARY KEY (FileID),
     CONSTRAINT FK_UserAccount
         FOREIGN KEY (FileOwnerID) 

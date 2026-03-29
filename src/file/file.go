@@ -11,44 +11,18 @@ import (
 const (
 	// FileColumnSize is the amount of columns used for the Files table.
 	// It is equal to the public fields of the [File] struct.
-	FileColumnSize int = 9
+	FileColumnSize  int    = 9
+	FileTableName   string = "File"
+	FileOwnerIDCol  string = "FileOwnerID"
+	FileNameCol     string = "FileName"
+	FileTypeCol     string = "FileType"
+	FileIDCol       string = "FileID"
+	ParentIDCol     string = "ParentID"
+	FilePathCol     string = "FilePath"
+	FileSizeCol     string = "FileSize"
+	ModifiedDateCol string = "ModifiedDate"
+	DeletedDateCol  string = "DeletedDate"
 )
-
-type File struct {
-	// Name is the name of the file. This includes the extension
-	// of the file.
-	Name string
-
-	// Type is the file type. This is either a "directory" or
-	// a "file".
-	Type string
-
-	// FileID is a unique ID assigned to the file.
-	FileID string
-
-	// ParentID is the parent's unique ID that the file resides in.
-	// This can be nil, meaning it resides in the root folder.
-	ParentID *string
-
-	// Path is the absolute path to the file on the disk. This is intended
-	// for the backend use only.
-	Path string
-
-	// Size is the size of the file.
-	Size int64
-
-	// ModifiedTime is the most recent time the file has been modified. This
-	// will be the most recent time of change or when it was first created.
-	ModifiedTime time.Time
-
-	// DeletedOn is the time when the file is set to be deleted. The acutal
-	// deletion occurs after a certain amount of time has passed
-	// since the marked deletion time. This value can be nil.
-	DeletedOn *time.Time
-
-	// OwnerID is the ID of the owner of the file.
-	OwnerID string
-}
 
 // Read returns a File slice for all files found in root.
 // An error will be returned if there is an issue while reading root.
@@ -132,7 +106,7 @@ func walk(root string) ([]File, error) {
 	return fs, nil
 }
 
-// FlattenFiles flattens the a slice of [File] structs to prepare for use in
+// FlattenFiles flattens the a slice of File structs to prepare for use in
 // a query.
 func FlattenFile(files ...File) []any {
 	out := []any{}
@@ -154,4 +128,40 @@ func FlattenFile(files ...File) []any {
 	}
 
 	return out
+}
+
+type File struct {
+	// OwnerID is the ID of the owner of the file.
+	OwnerID string
+
+	// Name is the name of the file. This includes the extension
+	// of the file.
+	Name string
+
+	// Type is the file type. This is either a "directory" or
+	// a "file".
+	Type string
+
+	// FileID is a unique ID assigned to the file.
+	FileID string
+
+	// ParentID is the parent's unique ID that the file resides in.
+	// This can be nil, meaning it resides in the root folder.
+	ParentID *string
+
+	// Path is the absolute path to the file on the disk. This is intended
+	// for the backend use only.
+	Path string
+
+	// Size is the size of the file.
+	Size int64
+
+	// ModifiedTime is the most recent time the file has been modified. This
+	// will be the most recent time of change or when it was first created.
+	ModifiedTime time.Time
+
+	// DeletedOn is the time when the file is set to be deleted. The acutal
+	// deletion occurs after a certain amount of time has passed
+	// since the marked deletion time. This value can be nil.
+	DeletedOn *time.Time
 }
