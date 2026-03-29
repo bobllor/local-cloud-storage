@@ -5,8 +5,8 @@ help:
 	@printf "%3sstop-test-db: Stops the test SQL Docker container\n"
 	@exit 0
 
-start-test-db:
+start-testdb:
 	@bash ./tools/start_testdb.sh
 
-stop-test-db:
+stop-testdb:
 	@bash ./tools/stop_testdb.sh
