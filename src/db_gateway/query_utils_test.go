@@ -13,7 +13,7 @@ func TestBuildSingleQuery(t *testing.T) {
 
 	arg1 := "afileid"
 	expectedArgs := 1
-	expectedQuery := fmt.Sprintf("%s = ?", file.FileIDCol)
+	expectedQuery := fmt.Sprintf("WHERE %s = ?", file.FileIDCol)
 
 	cb.Equal(file.FileIDCol, arg1)
 
@@ -32,7 +32,7 @@ func TestBuildAndQuery(t *testing.T) {
 	arg1 := "fileidhere"
 	arg2 := "filename.txt"
 
-	expectedQuery := fmt.Sprintf("%s = ? AND %s = ?", file.FileIDCol, file.FileNameCol)
+	expectedQuery := fmt.Sprintf("WHERE %s = ? AND %s = ?", file.FileIDCol, file.FileNameCol)
 
 	cb.Equal(file.FileIDCol, arg1).And().Equal(file.FileNameCol, arg2)
 
@@ -50,7 +50,7 @@ func TestInQuery(t *testing.T) {
 	cb := NewClauseBuilder()
 
 	expectedArgs := 4
-	expectedQuery := fmt.Sprintf("%s = ? AND %s IN (?,?,?)", file.FileOwnerIDCol, file.FileNameCol)
+	expectedQuery := fmt.Sprintf("WHERE %s = ? AND %s IN (?,?,?)", file.FileOwnerIDCol, file.FileNameCol)
 
 	cb.Equal(file.FileOwnerIDCol, "file-owner").And().In(file.FileNameCol, "test1.txt", "test2.txt", "test3.txt")
 
