@@ -12,6 +12,7 @@ const (
 	// FileColumnSize is the amount of columns used for the Files table.
 	// It is equal to the public fields of the [File] struct.
 	FileColumnSize  int    = 9
+	FileTableName   string = "File"
 	FileOwnerIDCol  string = "FileOwnerID"
 	FileNameCol     string = "FileName"
 	FileTypeCol     string = "FileType"
@@ -105,7 +106,7 @@ func walk(root string) ([]File, error) {
 	return fs, nil
 }
 
-// FlattenFiles flattens the a slice of [File] structs to prepare for use in
+// FlattenFiles flattens the a slice of File structs to prepare for use in
 // a query.
 func FlattenFile(files ...File) []any {
 	out := []any{}
