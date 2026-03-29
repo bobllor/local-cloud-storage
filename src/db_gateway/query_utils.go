@@ -76,7 +76,7 @@ type ClauseBuilder struct {
 // Build combines the registered clauses and returns the clause and
 // a flatten slice of all arguments in order of the clauses.
 //
-// The return query does not include WHERE.
+// The return query includes the WHERE.
 //
 // The clauses will be validated prior to building, if the clauses
 // are not built correctly then an error will be returned.
@@ -99,7 +99,7 @@ func (c *ClauseBuilder) Build() (string, []any, error) {
 		clauseHolder = append(clauseHolder, clause)
 	}
 
-	clause := strings.Join(clauseHolder, " ")
+	clause := "WHERE " + strings.Join(clauseHolder, " ")
 
 	return clause, c.args, nil
 }
