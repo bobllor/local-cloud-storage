@@ -81,17 +81,19 @@ type ClauseBuilder struct {
 // The clauses will be validated prior to building, if the clauses
 // are not built correctly then an error will be returned.
 func (c *ClauseBuilder) Build() (string, []any, error) {
-	clauseHolder := []string{}
-
+	if len(c.clauses) == 0 {
+		return "", nil, fmt.Errorf("clause validation failed: cannot build an empty clause")
+	}
 	err := c.validateEndClause()
 	if err != nil {
 		return "", nil, err
 	}
-
 	err = c.validateClauses()
 	if err != nil {
 		return "", nil, err
 	}
+
+	clauseHolder := []string{}
 
 	for _, clause := range c.clauses {
 		clauseHolder = append(clauseHolder, clause)
@@ -158,9 +160,6 @@ func (c *ClauseBuilder) addOperator(operator string) {
 //
 // It will return an error if it is not valid.
 func (c *ClauseBuilder) validateClauses() error {
-	if len(c.clauses) == 0 {
-		return fmt.Errorf("clause validation failed: cannot build an empty clause")
-	}
 	operators := []string{OperatorAnd, OperatorOr}
 	mustBeOp := false
 

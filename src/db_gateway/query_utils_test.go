@@ -72,3 +72,10 @@ func TestEndOperatorClauseError(t *testing.T) {
 	_, _, err := cb.Build()
 	assert.NotNil(t, err)
 }
+
+func TestEmptyClauseError(t *testing.T) {
+	cb := NewClauseBuilder()
+
+	_, _, err := cb.Build()
+	assert.NotNil(t, err)
+}
