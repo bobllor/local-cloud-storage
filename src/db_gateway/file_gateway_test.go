@@ -2,6 +2,7 @@ package dbgateway
 
 import (
 	"testing"
+	"time"
 
 	"github.com/bobllor/assert"
 	"github.com/bobllor/cloud-project/src/file"
@@ -22,14 +23,33 @@ const (
 	testFileID        = "randomfileidhere"
 )
 
-func TestFileQuery(t *testing.T) {
+func TestGetAllFiles(t *testing.T) {
 	fDb, err := getTestFileGateway()
 	assert.Nil(t, err)
 
-	files, err := fDb.QueryFile(testUserAccountID)
+	files, err := fDb.GetAllFiles(testUserAccountID)
 	assert.Nil(t, err)
 
 	assert.NotEqual(t, len(files), 0)
+}
+
+func TestGetFile(t *testing.T) {
+	fDb, err := getTestFileGateway()
+	assert.Nil(t, err)
+
+	fileFilters := []FileFilter{
+		{
+			Column:   file.FileIDCol,
+			Args:     []any{testFileID},
+			Type:     "IN",
+			Operator: "AND",
+		},
+	}
+
+	qFiles, err := fDb.GetFiles(testUserAccountID, fileFilters)
+	assert.Nil(t, err)
+
+	assert.Equal(t, len(qFiles), 1)
 }
 
 func TestAddFile(t *testing.T) {
@@ -51,9 +71,45 @@ func TestAddFile(t *testing.T) {
 
 	err = fDb.AddFile(files)
 	assert.Nil(t, err)
+
+	qFiles, err := fDb.GetAllFiles(testUserAccountID)
+	assert.Nil(t, err)
+
+	// only 1 row exists by default, afterwards it adds however many from files
+	assert.NotEqual(t, len(qFiles), 1)
 }
 
-func TestAddDuplicateFile(t *testing.T) {
+func TestDeleteFiles(t *testing.T) {
+	fDb, err := getTestFileGateway()
+	assert.Nil(t, err)
+
+	err = fDb.DeleteFiles(testUserAccountID, []string{testFileID})
+	assert.Nil(t, err)
+
+	fileFilters := []FileFilter{
+		{
+			Column:   file.FileIDCol,
+			Args:     []any{testFileID},
+			Type:     "IN",
+			Operator: "AND",
+		},
+	}
+
+	qFiles, err := fDb.GetFiles(testUserAccountID, fileFilters)
+	assert.Nil(t, err)
+
+	assert.NotNil(t, qFiles[0].DeletedOn)
+	assert.Equal(t, qFiles[0].FileID, testFileID)
+
+	now := time.Now()
+	qDate := qFiles[0].DeletedOn
+
+	assert.Equal(t, qDate.Year(), now.Year())
+	assert.Equal(t, qDate.Month(), now.Month())
+	assert.Equal(t, qDate.Day(), now.Day())
+}
+
+func TestAddDuplicateFileError(t *testing.T) {
 	fDb, err := getTestFileGateway()
 	assert.Nil(t, err)
 
@@ -66,7 +122,7 @@ func TestAddDuplicateFile(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
-func TestAddMissingOwnerIDFile(t *testing.T) {
+func TestAddMissingOwnerIDFileError(t *testing.T) {
 	fDb, err := getTestFileGateway()
 	assert.Nil(t, err)
 
