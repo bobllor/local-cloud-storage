@@ -2,18 +2,23 @@ package dbgateway
 
 import (
 	"database/sql"
-	"strings"
+	"fmt"
 
+	"github.com/bobllor/cloud-project/src/file"
 	"github.com/go-sql-driver/mysql"
 )
 
-// NewDatabase opens the SQL database and returns a [sql.DB].
+const (
+	dbDriver = "mysql"
+)
+
+// NewDatabase opens the SQL database and returns a sql.DB.
 // It will return an error if any errors occur.
 //
 // The database is pinged in this call, if it fails then
 // an error will be returned.
-func NewDatabase(config mysql.Config) (*sql.DB, error) {
-	db, err := sql.Open("mysql", config.FormatDSN())
+func NewDatabase(config *mysql.Config) (*sql.DB, error) {
+	db, err := sql.Open(dbDriver, config.FormatDSN())
 	if err != nil {
 		return nil, err
 	}
@@ -26,9 +31,9 @@ func NewDatabase(config mysql.Config) (*sql.DB, error) {
 	return db, nil
 }
 
-// NewConfig creates a new [mysql.Config] from the arguments.
-func NewConfig(user string, passwd string, net string, addr string, dbName string) mysql.Config {
-	c := mysql.Config{}
+// NewConfig creates a new *mysql.Config from the arguments.
+func NewConfig(user string, passwd string, net string, addr string, dbName string) *mysql.Config {
+	c := mysql.NewConfig()
 
 	c.User = user
 	c.Passwd = passwd
@@ -40,21 +45,24 @@ func NewConfig(user string, passwd string, net string, addr string, dbName strin
 	return c
 }
 
-// QueryParamBuilder builds the value parameters for queries to pass
-// arguments into.
-func QueryParamBuilder(paramSize int, repeat int) string {
-	questions := []string{}
-	out := []string{}
+// exec executes a query on a database and returns the Result. This
+// is only used for INSERT and UPDATE.
+func execQuery(db *sql.DB, query string, args ...any) (sql.Result, error) {
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, fmt.Errorf("failed to start transaction: %v", err)
+	}
+	defer tx.Rollback()
 
-	for range paramSize {
-		questions = append(questions, "?")
+	res, err := tx.Exec(query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute %s: %v", query, err)
 	}
 
-	param := "(" + strings.Join(questions, ",") + ")"
-
-	for range repeat {
-		out = append(out, param)
+	err = tx.Commit()
+	if err != nil {
+		return nil, fmt.Errorf("failed to commit transaction for %s: %v", file.FileTableName, err)
 	}
 
-	return strings.Join(out, ",")
+	return res, err
 }
