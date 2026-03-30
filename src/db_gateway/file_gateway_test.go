@@ -109,6 +109,41 @@ func TestDeleteFiles(t *testing.T) {
 	assert.Equal(t, qDate.Day(), now.Day())
 }
 
+func TestRestoreFiles(t *testing.T) {
+	fDb, err := getTestFileGateway()
+	assert.Nil(t, err)
+
+	fileFilters := []FileFilter{
+		{
+			Column:   file.FileIDCol,
+			Args:     []any{testFileID},
+			Type:     "EQUAL",
+			Operator: "AND",
+		},
+	}
+
+	err = fDb.DeleteFiles(testUserAccountID, []string{testFileID})
+	assert.Nil(t, err)
+
+	qFiles, err := fDb.GetFiles(testUserAccountID, fileFilters)
+	assert.Nil(t, err)
+
+	if qFiles[0].DeletedOn == nil {
+		t.Fatal("failed to set file to deleted with DeletedOn")
+	}
+
+	err = fDb.RestoreFiles(testUserAccountID, []string{testFileID})
+	assert.Nil(t, err)
+
+	qFiles, err = fDb.GetFiles(testUserAccountID, fileFilters)
+	assert.Nil(t, err)
+
+	// whoops my assert library fails this. TODO: need to fix!
+	if qFiles[0].DeletedOn != nil {
+		t.Fatal("failed restoring deletion to file on column DeletedOn")
+	}
+}
+
 func TestAddDuplicateFileError(t *testing.T) {
 	fDb, err := getTestFileGateway()
 	assert.Nil(t, err)

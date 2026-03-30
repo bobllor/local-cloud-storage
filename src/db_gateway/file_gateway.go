@@ -156,6 +156,35 @@ func (f *FileGateway) DeleteFiles(fileOwnerID string, fileIDs []string) error {
 	return nil
 }
 
+// RestoreFiles sets a file IDs that are unmark files that were marked for deletion.
+func (f *FileGateway) RestoreFiles(fileOwnerID string, fileIDs []string) error {
+	cb := NewClauseBuilder()
+
+	cb.Equal(file.FileOwnerIDCol, fileOwnerID)
+
+	convIDs := utils.ConvertToAny(fileIDs)
+
+	cb.And().In(file.FileIDCol, convIDs...)
+
+	cond, args, err := cb.Build()
+	if err != nil {
+		return fmt.Errorf("failed to build conditions: %v", err)
+	}
+
+	baseQuery := fmt.Sprintf("UPDATE %s SET %s = NULL", file.FileTableName, file.DeletedDateCol)
+	query := baseQuery + " " + cond
+
+	rows, err := execQuery(f.database, query, args...)
+	if err != nil {
+		return fmt.Errorf("failed to execute query: %v", err)
+	}
+
+	// TODO: add logging
+	fmt.Println(rows.RowsAffected())
+
+	return nil
+}
+
 // getFiles is a helper function used to scan and return
 // a slice of Files.
 //
