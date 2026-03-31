@@ -37,16 +37,19 @@ func TestGetFile(t *testing.T) {
 	fDb, err := getTestFileGateway()
 	assert.Nil(t, err)
 
-	fileFilters := []FileFilter{
+	batcher, err := NewBatcher(testUserAccountID)
+	assert.Nil(t, err)
+	conditions := []WhereCondition{
 		{
-			Column:   file.FileIDCol,
-			Args:     []any{testFileID},
-			Type:     "IN",
-			Operator: "AND",
+			Column:             file.FileIDCol,
+			Args:               []any{testFileID},
+			LogicalOperator:    OperatorAnd,
+			ComparisonOperator: Equal,
 		},
 	}
+	batcher.AddWhereConditions(conditions)
 
-	qFiles, err := fDb.GetFiles(testUserAccountID, fileFilters)
+	qFiles, err := fDb.GetFiles(batcher)
 	assert.Nil(t, err)
 
 	assert.Equal(t, len(qFiles), 1)
@@ -86,16 +89,19 @@ func TestDeleteFiles(t *testing.T) {
 	err = fDb.DeleteFiles(testUserAccountID, []string{testFileID})
 	assert.Nil(t, err)
 
-	fileFilters := []FileFilter{
+	batcher, err := NewBatcher(testUserAccountID)
+	assert.Nil(t, err)
+	conditions := []WhereCondition{
 		{
-			Column:   file.FileIDCol,
-			Args:     []any{testFileID},
-			Type:     "IN",
-			Operator: "AND",
+			Column:             file.FileIDCol,
+			Args:               []any{testFileID},
+			LogicalOperator:    OperatorAnd,
+			ComparisonOperator: Equal,
 		},
 	}
+	batcher.AddWhereConditions(conditions)
 
-	qFiles, err := fDb.GetFiles(testUserAccountID, fileFilters)
+	qFiles, err := fDb.GetFiles(batcher)
 	assert.Nil(t, err)
 
 	assert.NotNil(t, qFiles[0].DeletedOn)
@@ -113,19 +119,22 @@ func TestRestoreFiles(t *testing.T) {
 	fDb, err := getTestFileGateway()
 	assert.Nil(t, err)
 
-	fileFilters := []FileFilter{
+	batcher, err := NewBatcher(testUserAccountID)
+	assert.Nil(t, err)
+	conditions := []WhereCondition{
 		{
-			Column:   file.FileIDCol,
-			Args:     []any{testFileID},
-			Type:     "EQUAL",
-			Operator: "AND",
+			Column:             file.FileIDCol,
+			Args:               []any{testFileID},
+			LogicalOperator:    OperatorAnd,
+			ComparisonOperator: Equal,
 		},
 	}
+	batcher.AddWhereConditions(conditions)
 
 	err = fDb.DeleteFiles(testUserAccountID, []string{testFileID})
 	assert.Nil(t, err)
 
-	qFiles, err := fDb.GetFiles(testUserAccountID, fileFilters)
+	qFiles, err := fDb.GetFiles(batcher)
 	assert.Nil(t, err)
 
 	if qFiles[0].DeletedOn == nil {
@@ -135,13 +144,45 @@ func TestRestoreFiles(t *testing.T) {
 	err = fDb.RestoreFiles(testUserAccountID, []string{testFileID})
 	assert.Nil(t, err)
 
-	qFiles, err = fDb.GetFiles(testUserAccountID, fileFilters)
+	qFiles, err = fDb.GetFiles(batcher)
 	assert.Nil(t, err)
 
 	// whoops my assert library fails this. TODO: need to fix!
 	if qFiles[0].DeletedOn != nil {
 		t.Fatal("failed restoring deletion to file on column DeletedOn")
 	}
+}
+
+func TestUpdateModifiedFile(t *testing.T) {
+	fDb, err := getTestFileGateway()
+	assert.Nil(t, err)
+
+	batcher, err := NewBatcher(testUserAccountID)
+	assert.Nil(t, err)
+	conditions := []WhereCondition{
+		{
+			Column:             file.FileIDCol,
+			Args:               []any{testFileID},
+			LogicalOperator:    OperatorAnd,
+			ComparisonOperator: Equal,
+		},
+	}
+	batcher.AddWhereConditions(conditions)
+
+	baseFiles, err := fDb.GetFiles(batcher)
+	assert.Nil(t, err)
+
+	baseDate := baseFiles[0].ModifiedOn
+
+	err = fDb.UpdateModifiedFile(testUserAccountID, []string{testFileID})
+	assert.Nil(t, err)
+
+	newFiles, err := fDb.GetFiles(batcher)
+	assert.Nil(t, err)
+
+	newDate := newFiles[0].ModifiedOn
+
+	assert.Equal(t, baseDate.Compare(newDate), -1)
 }
 
 func TestAddDuplicateFileError(t *testing.T) {
