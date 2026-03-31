@@ -47,7 +47,6 @@ func NewConfig(user string, passwd string, net string, addr string, dbName strin
 }
 
 // NewBatcher creates a new Batcher for performing batch operations.
-// An error will be returned if columns and args are not equal in length.
 //
 // fileOwnerID is the target owner of the File rows being modified. This is required.
 func NewBatcher(fileOwnerID string) (*Batcher, error) {
