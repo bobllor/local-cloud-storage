@@ -2,11 +2,14 @@ package dbgateway
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/bobllor/assert"
 	"github.com/bobllor/cloud-project/src/file"
 )
+
+// TODO: add more testing for Batcher
 
 func TestBuildSingleQuery(t *testing.T) {
 	cb := ClauseBuilder{}
@@ -78,4 +81,128 @@ func TestEmptyClauseError(t *testing.T) {
 
 	_, _, err := cb.Build()
 	assert.NotNil(t, err)
+}
+
+func TestRegisterNoConditionsBatcher(t *testing.T) {
+	cb := NewClauseBuilder()
+
+	b, err := NewBatcher(testUserAccountID)
+	assert.Nil(t, err)
+
+	err = cb.RegisterBatcher(b)
+	assert.Nil(t, err)
+
+	baseQuery := fmt.Sprintf("WHERE %s = ?", file.FileOwnerIDCol)
+
+	q, _, err := cb.Build()
+	assert.Nil(t, err)
+
+	assert.Equal(t, q, baseQuery)
+}
+
+func TestRegisterConditionsBatcher(t *testing.T) {
+	cb := NewClauseBuilder()
+
+	b, err := NewBatcher(testUserAccountID)
+	assert.Nil(t, err)
+
+	conditions := []WhereCondition{
+		{
+			Column:             file.FileIDCol,
+			Args:               []any{testFileID},
+			ComparisonOperator: Equal,
+			LogicalOperator:    OperatorAnd,
+		},
+		{
+			Column:             file.ParentIDCol,
+			Args:               []any{"1234", "4567", "1230", "1350"},
+			ComparisonOperator: In,
+			LogicalOperator:    OperatorAnd,
+		},
+	}
+	b.AddWhereConditions(conditions)
+
+	err = cb.RegisterBatcher(b)
+	assert.Nil(t, err)
+
+	baseQuery := fmt.Sprintf(
+		"WHERE %s = ? AND %s = ? AND %s IN (?,?,?,?)",
+		file.FileOwnerIDCol,
+		file.FileIDCol,
+		file.ParentIDCol,
+	)
+
+	q, _, err := cb.Build()
+	assert.Nil(t, err)
+
+	assert.Equal(t, q, baseQuery)
+}
+
+func TestSingleBuildPlaceholder(t *testing.T) {
+	params := 5
+	repeat := 1
+
+	query := BuildPlaceholder(params, repeat)
+	spl := strings.Split(query, ")")
+
+	assert.Equal(t, len(spl)-1, repeat)
+	assert.Equal(t, len(strings.Split(query, ",")), params)
+}
+
+func TestMultiBuildPlaceholder(t *testing.T) {
+	params := 8
+	repeat := 3
+
+	query := BuildPlaceholder(params, repeat)
+	querySplit := strings.Split(query, ")")
+
+	// has to subtract -1 due to an invisible string at the end.
+	assert.Equal(t, len(querySplit)-1, repeat)
+
+	assert.Equal(t, len(strings.Split(querySplit[0], ",")), params)
+}
+
+func TestSingleSetPlaceholder(t *testing.T) {
+	columns := []string{file.FileNameCol}
+
+	query := BuildSetPlaceholder(columns)
+
+	querySplit := strings.Split(query, ",")
+
+	assert.Equal(t, len(querySplit), len(columns))
+	assert.Equal(t, strings.Contains(query, columns[0]), true)
+
+	counter := 0
+
+	for _, ch := range query {
+		if ch == '?' {
+			counter += 1
+		}
+	}
+
+	assert.Equal(t, counter, len(columns))
+}
+
+func TestMultiSetPlaceholder(t *testing.T) {
+	columns := []string{file.FileNameCol, file.FileIDCol, file.FileSizeCol}
+
+	query := BuildSetPlaceholder(columns)
+
+	querySplit := strings.Split(query, ",")
+
+	assert.Equal(t, len(querySplit), len(columns))
+
+	for _, col := range columns {
+		assert.Equal(t, strings.Contains(query, col), true)
+	}
+
+	counter := 0
+
+	for _, ch := range query {
+		if ch == '?' {
+			counter += 1
+		}
+	}
+
+	assert.Equal(t, counter, len(columns))
 }

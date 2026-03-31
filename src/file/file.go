@@ -11,17 +11,17 @@ import (
 const (
 	// FileColumnSize is the amount of columns used for the Files table.
 	// It is equal to the public fields of the [File] struct.
-	FileColumnSize  int    = 9
-	FileTableName   string = "File"
-	FileOwnerIDCol  string = "FileOwnerID"
-	FileNameCol     string = "FileName"
-	FileTypeCol     string = "FileType"
-	FileIDCol       string = "FileID"
-	ParentIDCol     string = "ParentID"
-	FilePathCol     string = "FilePath"
-	FileSizeCol     string = "FileSize"
-	ModifiedDateCol string = "ModifiedDate"
-	DeletedDateCol  string = "DeletedDate"
+	FileColumnSize int    = 9
+	FileTableName  string = "File"
+	FileOwnerIDCol string = "FileOwnerID"
+	FileNameCol    string = "FileName"
+	FileTypeCol    string = "FileType"
+	FileIDCol      string = "FileID"
+	ParentIDCol    string = "ParentID"
+	FilePathCol    string = "FilePath"
+	FileSizeCol    string = "FileSize"
+	ModifiedOnCol  string = "ModifiedOn"
+	DeletedOnCol   string = "DeletedOn"
 )
 
 // Read returns a File slice for all files found in root.
@@ -82,14 +82,14 @@ func walk(root string) ([]File, error) {
 			}
 
 			f := File{
-				Name:         info.Name(),
-				Type:         fileType,
-				Size:         info.Size(),
-				Path:         p,
-				FileID:       id,
-				ParentID:     parentID,
-				ModifiedTime: info.ModTime(),
-				OwnerID:      accountID,
+				Name:       info.Name(),
+				Type:       fileType,
+				Size:       info.Size(),
+				Path:       p,
+				FileID:     id,
+				ParentID:   parentID,
+				ModifiedOn: info.ModTime(),
+				OwnerID:    accountID,
 			}
 
 			fs = append(fs, f)
@@ -123,7 +123,7 @@ func FlattenFile(files ...File) []any {
 		appendFunc(file.ParentID)
 		appendFunc(file.Path)
 		appendFunc(file.Size)
-		appendFunc(file.ModifiedTime)
+		appendFunc(file.ModifiedOn)
 		appendFunc(file.DeletedOn)
 	}
 
@@ -156,9 +156,9 @@ type File struct {
 	// Size is the size of the file.
 	Size int64
 
-	// ModifiedTime is the most recent time the file has been modified. This
+	// ModifiedOn is the most recent time the file has been modified. This
 	// will be the most recent time of change or when it was first created.
-	ModifiedTime time.Time
+	ModifiedOn time.Time
 
 	// DeletedOn is the time when the file is set to be deleted. The acutal
 	// deletion occurs after a certain amount of time has passed

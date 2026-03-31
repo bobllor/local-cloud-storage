@@ -4,21 +4,29 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+
+	"github.com/bobllor/cloud-project/src/file"
 )
 
-const (
-	Equal   = "="
-	Gt      = ">"
-	Gte     = ">="
-	Lt      = "<"
-	Lte     = "<="
-	Ne      = "<>"
-	Between = "BETWEEN"
-	Like    = "LIKE"
-	In      = "IN"
+type ComparisonOperator string
 
-	OperatorAnd = "AND"
-	OperatorOr  = "OR"
+const (
+	Equal   ComparisonOperator = "="
+	Gt      ComparisonOperator = ">"
+	Gte     ComparisonOperator = ">="
+	Lt      ComparisonOperator = "<"
+	Lte     ComparisonOperator = "<="
+	Ne      ComparisonOperator = "<>"
+	Between ComparisonOperator = "BETWEEN"
+	Like    ComparisonOperator = "LIKE"
+	In      ComparisonOperator = "IN"
+)
+
+type LogicalOperator string
+
+const (
+	OperatorAnd LogicalOperator = "AND"
+	OperatorOr  LogicalOperator = "OR"
 )
 
 // NewClauseBuilder creates a new ClauseBuilder.
@@ -54,6 +62,19 @@ func BuildPlaceholder(placeholderCount int, repeat int) string {
 	}
 
 	return strings.Join(out, ",")
+}
+
+// BuildSetPlaceholder builds the strings for updating columns in a table.
+func BuildSetPlaceholder(columns []string) string {
+	placeholders := []string{}
+
+	for _, column := range columns {
+		placeholder := fmt.Sprintf("%s = ?", column)
+
+		placeholders = append(placeholders, placeholder)
+	}
+
+	return strings.Join(placeholders, ",")
 }
 
 // DBClauseBuilder is a helper in building dynamic WHERE conditions.
@@ -125,6 +146,34 @@ func (c *ClauseBuilder) In(column string, args ...any) *ClauseBuilder {
 	return c
 }
 
+// RegisterBatcher registers clauses into the ClauseBuilder using a Batcher.
+// This will register the FileOwnerID by default as it is required for Batcher types.
+func (cb *ClauseBuilder) RegisterBatcher(batcher *Batcher) error {
+	cb.Equal(file.FileOwnerIDCol, batcher.FileOwnerID)
+
+	for _, condition := range batcher.Conditions {
+		switch logicOp := condition.LogicalOperator; logicOp {
+		case OperatorAnd:
+			cb.And()
+		case OperatorOr:
+			cb.Or()
+		default:
+			return fmt.Errorf("logical operator %s not supported", logicOp)
+		}
+
+		switch compOp := condition.ComparisonOperator; compOp {
+		case Equal:
+			cb.Equal(condition.Column, condition.Args[0])
+		case In:
+			cb.In(condition.Column, condition.Args...)
+		default:
+			return fmt.Errorf("comparison operator %s not supported", compOp)
+		}
+	}
+
+	return nil
+}
+
 // And adds an AND operator to the clauses to prepare the next
 // condition.
 func (c *ClauseBuilder) And() *ClauseBuilder {
@@ -150,8 +199,8 @@ func (c *ClauseBuilder) register(clause string, args ...any) {
 
 // addOperator adds an operator to clauses to prepare the next
 // clause condition.
-func (c *ClauseBuilder) addOperator(operator string) {
-	c.clauses = append(c.clauses, operator)
+func (c *ClauseBuilder) addOperator(operator LogicalOperator) {
+	c.clauses = append(c.clauses, string(operator))
 }
 
 // validateClauses checks if a clause is valid. This validates
@@ -160,13 +209,13 @@ func (c *ClauseBuilder) addOperator(operator string) {
 //
 // It will return an error if it is not valid.
 func (c *ClauseBuilder) validateClauses() error {
-	operators := []string{OperatorAnd, OperatorOr}
+	operators := []LogicalOperator{OperatorAnd, OperatorOr}
 	mustBeOp := false
 
 	for _, clause := range c.clauses {
-		if mustBeOp && !slices.Contains(operators, clause) {
+		if mustBeOp && !slices.Contains(operators, LogicalOperator(clause)) {
 			return fmt.Errorf("expected operator (AND/OR) but got clause %s (%v)", clause, c.clauses)
-		} else if !mustBeOp && slices.Contains(operators, clause) {
+		} else if !mustBeOp && slices.Contains(operators, LogicalOperator(clause)) {
 			return fmt.Errorf("expected non-operator clause but got %s (%v)", clause, c.clauses)
 		}
 
@@ -184,12 +233,12 @@ func (c *ClauseBuilder) validateClauses() error {
 // This is used to drop operators without a follow-up clause.
 // When a normal clause is encountered, then it will stop the search.
 func (c *ClauseBuilder) validateEndClause() error {
-	operators := []string{OperatorAnd, OperatorOr}
+	operators := []LogicalOperator{OperatorAnd, OperatorOr}
 
 	for lp := len(c.clauses) - 1; lp > -1; lp-- {
 		clause := c.clauses[lp]
 
-		if slices.Contains(operators, clause) {
+		if slices.Contains(operators, LogicalOperator(clause)) {
 			return fmt.Errorf("end clauses cannot end in an operator: got %s (%v)", clause, c.clauses)
 		} else {
 			break

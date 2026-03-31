@@ -54,15 +54,13 @@ func (f *FileGateway) GetAllFiles(fileOwnerID string) ([]file.File, error) {
 
 // GetFiles returns File rows based on the clause and conditions.
 //
-// filters is a slice of FileFilter that are used to build the conditions
-// after the file owner condition. All fields of FileFilter must have an entry.
-func (f *FileGateway) GetFiles(fileOwnerID string, filters []FileFilter) ([]file.File, error) {
+// batcher is a type that holds information for dynamic queries.
+func (f *FileGateway) GetFiles(batcher *Batcher) ([]file.File, error) {
 	cb := NewClauseBuilder()
 
-	cb.Equal(file.FileOwnerIDCol, fileOwnerID)
 	baseQuery := fmt.Sprintf("SELECT * FROM %s", file.FileTableName)
 
-	err := QueryFromFilters(cb, filters)
+	err := cb.RegisterBatcher(batcher)
 	if err != nil {
 		return nil, err
 	}
@@ -74,8 +72,9 @@ func (f *FileGateway) GetFiles(fileOwnerID string, filters []FileFilter) ([]file
 
 	query := baseQuery + " " + q
 
-	// TODO: log here
+	// TODO: add logging here
 	fmt.Println(query)
+	fmt.Println(args)
 
 	rows, err := f.database.Query(query, args...)
 	if err != nil {
@@ -116,6 +115,35 @@ func (f *FileGateway) AddFile(files []file.File) error {
 	return nil
 }
 
+// UpdateModifiedFile updates the modified date column to the current time.
+func (f *FileGateway) UpdateModifiedFile(fileOwnerID string, fileIDs []string) error {
+	cb := NewClauseBuilder()
+
+	convIds := utils.ConvertToAny(fileIDs)
+
+	cb.Equal(file.FileOwnerIDCol, fileOwnerID).And().In(file.FileIDCol, convIds...)
+
+	qCon, args, err := cb.Build()
+	if err != nil {
+		return fmt.Errorf("failed to build query: %v", err)
+	}
+
+	query := fmt.Sprintf("UPDATE %s SET %s = ?", file.FileTableName, file.ModifiedOnCol) + " " + qCon
+
+	finalArgs := []any{time.Now().Format(time.DateTime)}
+	finalArgs = append(finalArgs, args...)
+
+	res, err := execQuery(f.database, query, finalArgs...)
+	if err != nil {
+		return fmt.Errorf("failed to execute query: %v", err)
+	}
+
+	// TODO: logging
+	fmt.Println(res.RowsAffected())
+
+	return nil
+}
+
 // DeleteFile sets a slice of file IDs to be marked for deletion.
 // This does not delete the files immediately.
 func (f *FileGateway) DeleteFiles(fileOwnerID string, fileIDs []string) error {
@@ -124,13 +152,6 @@ func (f *FileGateway) DeleteFiles(fileOwnerID string, fileIDs []string) error {
 	if len(fileIDs) == 0 {
 		return fmt.Errorf("failed to delete files, got empty file IDs")
 	}
-
-	baseQuery := fmt.Sprintf(
-		"UPDATE %s SET %s = '%v'",
-		file.FileTableName,
-		file.DeletedDateCol,
-		time.Now().Format(time.DateTime),
-	)
 
 	convFileIDs := utils.ConvertToAny(fileIDs)
 
@@ -141,17 +162,54 @@ func (f *FileGateway) DeleteFiles(fileOwnerID string, fileIDs []string) error {
 		return fmt.Errorf("failed to build condition query: %v", err)
 	}
 
+	baseQuery := fmt.Sprintf(
+		"UPDATE %s SET %s = ?",
+		file.FileTableName,
+		file.DeletedOnCol,
+	)
 	query := baseQuery + " " + qCondition
 
 	// TODO: add logging
 	fmt.Println(query)
 
-	res, err := execQuery(f.database, query, args...)
+	finalArgs := []any{time.Now().Format(time.DateTime)}
+	finalArgs = append(finalArgs, args...)
+
+	res, err := execQuery(f.database, query, finalArgs...)
 	if err != nil {
 		return err
 	}
 
 	fmt.Println(res.RowsAffected())
+
+	return nil
+}
+
+// RestoreFiles sets a file IDs that are unmark files that were marked for deletion.
+func (f *FileGateway) RestoreFiles(fileOwnerID string, fileIDs []string) error {
+	cb := NewClauseBuilder()
+
+	cb.Equal(file.FileOwnerIDCol, fileOwnerID)
+
+	convIDs := utils.ConvertToAny(fileIDs)
+
+	cb.And().In(file.FileIDCol, convIDs...)
+
+	cond, args, err := cb.Build()
+	if err != nil {
+		return fmt.Errorf("failed to build conditions: %v", err)
+	}
+
+	baseQuery := fmt.Sprintf("UPDATE %s SET %s = NULL", file.FileTableName, file.DeletedOnCol)
+	query := baseQuery + " " + cond
+
+	rows, err := execQuery(f.database, query, args...)
+	if err != nil {
+		return fmt.Errorf("failed to execute query: %v", err)
+	}
+
+	// TODO: add logging
+	fmt.Println(rows.RowsAffected())
 
 	return nil
 }
@@ -184,20 +242,21 @@ func (f *FileGateway) getFiles(rows *sql.Rows) ([]file.File, error) {
 		dateFormat := time.DateTime
 		modifiedDate, err := time.Parse(dateFormat, string(modifiedTimeSl))
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse %s column: %v", file.ModifiedDateCol, err)
+			return nil, fmt.Errorf("failed to parse %s column: %v", file.ModifiedOnCol, err)
 		}
 
 		var deletedDate *time.Time
+		// NULL is an empty slice
 		if len(deletedTimeSl) > 0 {
 			dateTemp, err := time.Parse(dateFormat, string(deletedTimeSl))
 			if err != nil {
-				return nil, fmt.Errorf("failed to parse %s column: %v", file.DeletedDateCol, err)
+				return nil, fmt.Errorf("failed to parse %s column: %v", file.DeletedOnCol, err)
 			}
 
 			deletedDate = &dateTemp
 		}
 
-		f.ModifiedTime = modifiedDate
+		f.ModifiedOn = modifiedDate
 		f.DeletedOn = deletedDate
 
 		if scanErr != nil {
@@ -208,32 +267,4 @@ func (f *FileGateway) getFiles(rows *sql.Rows) ([]file.File, error) {
 	}
 
 	return files, nil
-}
-
-// TODO: make everything below this better. for now its temporary for a baseline!
-
-type FileFilter struct {
-	Column   string
-	Args     []any
-	Type     string
-	Operator string
-}
-
-// QueryFromFilters registers clauses from a slice of FileFilters.
-func QueryFromFilters(cb *ClauseBuilder, fileFilters []FileFilter) error {
-	for _, filter := range fileFilters {
-		if filter.Operator == "AND" {
-			cb.And()
-		} else {
-			cb.Or()
-		}
-
-		if filter.Type == "EQUAL" {
-			cb.Equal(filter.Column, filter.Args[0])
-		} else {
-			cb.In(filter.Column, filter.Args...)
-		}
-	}
-
-	return nil
 }

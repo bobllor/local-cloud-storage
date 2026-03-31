@@ -7,6 +7,7 @@ require github.com/google/uuid v1.6.0
 require github.com/bobllor/assert v0.0.0-20260321113725-ca1585664b2f
 
 require (
+	github.com/bobllor/gologger v0.0.0-20260325053316-c6411f071b7a
 	github.com/go-sql-driver/mysql v1.9.3
 	github.com/goccy/go-yaml v1.19.2
 	github.com/joho/godotenv v1.5.1
