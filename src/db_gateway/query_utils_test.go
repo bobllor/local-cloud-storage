@@ -2,6 +2,7 @@ package dbgateway
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/bobllor/assert"
@@ -78,4 +79,73 @@ func TestEmptyClauseError(t *testing.T) {
 
 	_, _, err := cb.Build()
 	assert.NotNil(t, err)
+}
+
+func TestSingleBuildPlaceholder(t *testing.T) {
+	params := 5
+	repeat := 1
+
+	query := BuildPlaceholder(params, repeat)
+	spl := strings.Split(query, ")")
+
+	assert.Equal(t, len(spl)-1, repeat)
+	assert.Equal(t, len(strings.Split(query, ",")), params)
+}
+
+func TestMultiBuildPlaceholder(t *testing.T) {
+	params := 8
+	repeat := 3
+
+	query := BuildPlaceholder(params, repeat)
+	querySplit := strings.Split(query, ")")
+
+	// has to subtract -1 due to an invisible string at the end.
+	assert.Equal(t, len(querySplit)-1, repeat)
+
+	assert.Equal(t, len(strings.Split(querySplit[0], ",")), params)
+}
+
+func TestSingleSetPlaceholder(t *testing.T) {
+	columns := []string{file.FileNameCol}
+
+	query := BuildSetPlaceholder(columns)
+
+	querySplit := strings.Split(query, ",")
+
+	assert.Equal(t, len(querySplit), len(columns))
+	assert.Equal(t, strings.Contains(query, columns[0]), true)
+
+	counter := 0
+
+	for _, ch := range query {
+		if ch == '?' {
+			counter += 1
+		}
+	}
+
+	assert.Equal(t, counter, len(columns))
+}
+
+func TestMultiSetPlaceholder(t *testing.T) {
+	columns := []string{file.FileNameCol, file.FileIDCol, file.FileSizeCol}
+
+	query := BuildSetPlaceholder(columns)
+
+	querySplit := strings.Split(query, ",")
+
+	assert.Equal(t, len(querySplit), len(columns))
+
+	for _, col := range columns {
+		assert.Equal(t, strings.Contains(query, col), true)
+	}
+
+	counter := 0
+
+	for _, ch := range query {
+		if ch == '?' {
+			counter += 1
+		}
+	}
+
+	assert.Equal(t, counter, len(columns))
 }
