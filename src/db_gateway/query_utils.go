@@ -6,17 +6,21 @@ import (
 	"strings"
 )
 
-const (
-	Equal   = "="
-	Gt      = ">"
-	Gte     = ">="
-	Lt      = "<"
-	Lte     = "<="
-	Ne      = "<>"
-	Between = "BETWEEN"
-	Like    = "LIKE"
-	In      = "IN"
+type ComparisonOperator string
 
+const (
+	Equal   ComparisonOperator = "="
+	Gt      ComparisonOperator = ">"
+	Gte     ComparisonOperator = ">="
+	Lt      ComparisonOperator = "<"
+	Lte     ComparisonOperator = "<="
+	Ne      ComparisonOperator = "<>"
+	Between ComparisonOperator = "BETWEEN"
+	Like    ComparisonOperator = "LIKE"
+	In      ComparisonOperator = "IN"
+)
+
+const (
 	OperatorAnd = "AND"
 	OperatorOr  = "OR"
 )
@@ -54,6 +58,19 @@ func BuildPlaceholder(placeholderCount int, repeat int) string {
 	}
 
 	return strings.Join(out, ",")
+}
+
+// BuildSetPlaceholder builds the strings for updating columns in a table.
+func BuildSetPlaceholder(columns []string) string {
+	placeholders := []string{}
+
+	for _, column := range columns {
+		placeholder := fmt.Sprintf("%s = ?", column)
+
+		placeholders = append(placeholders, placeholder)
+	}
+
+	return strings.Join(placeholders, ",")
 }
 
 // DBClauseBuilder is a helper in building dynamic WHERE conditions.
