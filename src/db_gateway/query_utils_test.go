@@ -9,8 +9,6 @@ import (
 	"github.com/bobllor/cloud-project/src/file"
 )
 
-// TODO: add more testing for Batcher
-
 func TestBuildSingleQuery(t *testing.T) {
 	cb := ClauseBuilder{}
 
@@ -205,4 +203,9 @@ func TestMultiSetPlaceholder(t *testing.T) {
 	}
 
 	assert.Equal(t, counter, len(columns))
+}
+
+func TestBatcherEmptyFileOwner(t *testing.T) {
+	_, err := NewBatcher("")
+	assert.NotNil(t, err)
 }
