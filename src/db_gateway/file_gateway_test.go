@@ -15,6 +15,7 @@ import (
 // By default when the test Docker setup is ran, one row is added to both
 // the UserAccount and File table by default.
 // As rows are added into the table, it will grow over the course of the test cases.
+// Majority of the tests with modifications only affects the default rows.
 // Be aware of it!
 
 // Constant variables that are the column data of the first (and by default) entries in the test DB.
