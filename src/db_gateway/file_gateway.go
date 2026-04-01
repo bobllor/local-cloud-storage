@@ -9,6 +9,8 @@ import (
 	"github.com/bobllor/cloud-project/src/utils"
 )
 
+const ()
+
 func NewFileGateway(database *sql.DB) *FileGateway {
 	f := &FileGateway{
 		database:       database,
@@ -53,16 +55,16 @@ func (f *FileGateway) GetAllFiles(fileOwnerID string) ([]file.File, error) {
 }
 
 // GetFiles returns File rows based on the clause and conditions.
-//
-// batcher is a type that holds information for dynamic queries.
-func (f *FileGateway) GetFiles(batcher *Batcher) ([]file.File, error) {
+func (f *FileGateway) GetFiles(fileOwnerID string, conditions []WhereCondition) ([]file.File, error) {
 	cb := NewClauseBuilder()
 
 	baseQuery := fmt.Sprintf("SELECT * FROM %s", file.FileTableName)
 
-	err := cb.RegisterBatcher(batcher)
+	cb.Equal(file.FileOwnerIDCol, fileOwnerID)
+
+	err := cb.RegisterConditions(conditions)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to register conditions: %v", err)
 	}
 
 	q, args, err := cb.Build()
@@ -87,6 +89,75 @@ func (f *FileGateway) GetFiles(batcher *Batcher) ([]file.File, error) {
 	}
 
 	return files, nil
+}
+
+// UpdateFileByID updates a file row by ID.
+//
+// cd is a ClauseData type used to target the columns and values to replace for the row.
+func (f *FileGateway) UpdateFileByID(fileOwnerID string, fileID string, cd ClauseData) error {
+	conditions := []WhereCondition{
+		{
+			Column:             file.FileIDCol,
+			Args:               []any{fileID},
+			ComparisonOperator: Equal,
+			LogicalOperator:    OperatorAnd,
+		},
+	}
+
+	err := f.UpdateFiles(fileOwnerID, cd, conditions)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// UpdateFiles updates the Files table based ClauseData and conditions.
+//
+// Errors will be returned if one occurs.
+// Certain columns are forbidden from being changed, and will return an error
+// if these are found.
+func (f *FileGateway) UpdateFiles(fileOwnerID string, cd ClauseData, conditions []WhereCondition) error {
+	cb := NewClauseBuilder()
+
+	setQ, err := cd.BuildSetQuery()
+	if err != nil {
+		return fmt.Errorf("failed to validate ClauseData: %v", err)
+	}
+
+	baseQuery := fmt.Sprintf("UPDATE %s", file.FileTableName) + " " + setQ
+
+	cb.Equal(file.FileOwnerIDCol, fileOwnerID)
+
+	err = cb.RegisterConditions(conditions)
+	if err != nil {
+		return fmt.Errorf("failed to register conditions: %v", err)
+	}
+
+	whereQ, args, err := cb.Build()
+	if err != nil {
+		return fmt.Errorf("failed to build WHERE clause: %v", err)
+	}
+
+	query := baseQuery + " " + whereQ
+
+	// TODO: add logging
+	fmt.Println(query)
+
+	execArgs := []any{}
+
+	execArgs = append(execArgs, cd.Args...)
+	execArgs = append(execArgs, args...)
+
+	res, err := execQuery(f.database, query, execArgs...)
+	if err != nil {
+		return fmt.Errorf("failed to execute query: %v (args: %v)", err, execArgs)
+	}
+
+	// TODO: add logging
+	fmt.Println(res.RowsAffected())
+
+	return nil
 }
 
 // AddFile adds slice of File structs to the File database.
@@ -115,8 +186,8 @@ func (f *FileGateway) AddFile(files []file.File) error {
 	return nil
 }
 
-// UpdateModifiedFile updates the modified date column to the current time.
-func (f *FileGateway) UpdateModifiedFile(fileOwnerID string, fileIDs []string) error {
+// UpdateModifiedFiles updates the modified date column to the current time.
+func (f *FileGateway) UpdateModifiedFiles(fileOwnerID string, fileIDs []string) error {
 	cb := NewClauseBuilder()
 
 	convIds := utils.ConvertToAny(fileIDs)
