@@ -1,6 +1,7 @@
 package dbgateway
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"testing"
@@ -10,6 +11,7 @@ import (
 	"github.com/bobllor/cloud-project/src/config"
 	"github.com/bobllor/cloud-project/src/file"
 	"github.com/bobllor/cloud-project/src/tests"
+	"github.com/bobllor/cloud-project/src/utils"
 	"github.com/bobllor/gologger"
 )
 
@@ -70,9 +72,12 @@ func TestAddFile(t *testing.T) {
 	files, err := file.Read(dir)
 	assert.Nil(t, err)
 
+	fileIDs := []string{}
 	// File.OwnerID is nil, this is changed to the existing account ID by default.
 	for i := range files {
 		files[i].OwnerID = testUserAccountID
+
+		fileIDs = append(fileIDs, files[i].FileID)
 	}
 
 	err = fDb.AddFile(files)
@@ -83,6 +88,10 @@ func TestAddFile(t *testing.T) {
 
 	// only 1 row exists by default, afterwards it adds however many from files
 	assert.NotEqual(t, len(qFiles), 1)
+
+	fmt.Println(fileIDs)
+	_, err = devDropRows(fDb.database, file.FileTableName, file.FileIDCol, utils.ConvertToAny(fileIDs)...)
+	assert.Nil(t, err)
 }
 
 func TestUpdateFileByID(t *testing.T) {
