@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"slices"
 	"strings"
-
-	"github.com/bobllor/cloud-project/src/file"
 )
 
 type ComparisonOperator string
@@ -65,6 +63,7 @@ func BuildPlaceholder(placeholderCount int, repeat int) string {
 }
 
 // BuildSetPlaceholder builds the strings for updating columns in a table.
+// The output will be in the form of: "Column1 = value,Column2 = value, ..."
 func BuildSetPlaceholder(columns []string) string {
 	placeholders := []string{}
 
@@ -146,19 +145,23 @@ func (c *ClauseBuilder) In(column string, args ...any) *ClauseBuilder {
 	return c
 }
 
-// RegisterBatcher registers clauses into the ClauseBuilder using a Batcher.
-// This will register the FileOwnerID by default as it is required for Batcher types.
-func (cb *ClauseBuilder) RegisterBatcher(batcher *Batcher) error {
-	cb.Equal(file.FileOwnerIDCol, batcher.FileOwnerID)
-
-	for _, condition := range batcher.Conditions {
-		switch logicOp := condition.LogicalOperator; logicOp {
-		case OperatorAnd:
-			cb.And()
-		case OperatorOr:
-			cb.Or()
-		default:
-			return fmt.Errorf("logical operator %s not supported", logicOp)
+// RegisterConditions registers WHERE conditions into the ClauseBuilder.
+//
+// If conditions are registered when no clauses are registered, the first condition
+// logical operator will be ignored.
+func (cb *ClauseBuilder) RegisterConditions(conditions []WhereCondition) error {
+	for _, condition := range conditions {
+		// ignores this if empty as it would be invalid
+		// logical operators in the first slot will be caught by cb.Build
+		if len(cb.args) != 0 {
+			switch logicOp := condition.LogicalOperator; logicOp {
+			case OperatorAnd:
+				cb.And()
+			case OperatorOr:
+				cb.Or()
+			default:
+				return fmt.Errorf("logical operator %s not supported", logicOp)
+			}
 		}
 
 		switch compOp := condition.ComparisonOperator; compOp {

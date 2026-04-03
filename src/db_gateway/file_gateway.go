@@ -5,14 +5,20 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/bobllor/cloud-project/src/config"
 	"github.com/bobllor/cloud-project/src/file"
 	"github.com/bobllor/cloud-project/src/utils"
 )
 
-func NewFileGateway(database *sql.DB) *FileGateway {
+const ()
+
+// NewFileGateway creates a new FileGateway for database related options.
+func NewFileGateway(database *sql.DB, config *config.Config) *FileGateway {
 	f := &FileGateway{
 		database:       database,
 		fileFieldCount: file.FileColumnSize,
+		config:         config,
+		logUtil:        LogUtility{log: config.Log},
 	}
 
 	return f
@@ -21,6 +27,8 @@ func NewFileGateway(database *sql.DB) *FileGateway {
 type FileGateway struct {
 	database       *sql.DB
 	fileFieldCount int
+	config         *config.Config
+	logUtil        LogUtility
 }
 
 // GetAllFiles returns a File slice of all File rows belonging to the file owner.
@@ -53,16 +61,16 @@ func (f *FileGateway) GetAllFiles(fileOwnerID string) ([]file.File, error) {
 }
 
 // GetFiles returns File rows based on the clause and conditions.
-//
-// batcher is a type that holds information for dynamic queries.
-func (f *FileGateway) GetFiles(batcher *Batcher) ([]file.File, error) {
+func (f *FileGateway) GetFiles(fileOwnerID string, conditions []WhereCondition) ([]file.File, error) {
 	cb := NewClauseBuilder()
 
 	baseQuery := fmt.Sprintf("SELECT * FROM %s", file.FileTableName)
 
-	err := cb.RegisterBatcher(batcher)
+	cb.Equal(file.FileOwnerIDCol, fileOwnerID)
+
+	err := cb.RegisterConditions(conditions)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to register conditions: %v", err)
 	}
 
 	q, args, err := cb.Build()
@@ -72,9 +80,7 @@ func (f *FileGateway) GetFiles(batcher *Batcher) ([]file.File, error) {
 
 	query := baseQuery + " " + q
 
-	// TODO: add logging here
-	fmt.Println(query)
-	fmt.Println(args)
+	f.logUtil.LogQueryAndArgs(query, args)
 
 	rows, err := f.database.Query(query, args...)
 	if err != nil {
@@ -87,6 +93,73 @@ func (f *FileGateway) GetFiles(batcher *Batcher) ([]file.File, error) {
 	}
 
 	return files, nil
+}
+
+// UpdateFileByID updates a single file row by its file ID.
+//
+// cd is a ClauseData type used to target the columns and values to replace for the row.
+func (f *FileGateway) UpdateFileByID(fileOwnerID string, fileID string, cd ClauseData) error {
+	conditions := []WhereCondition{
+		{
+			Column:             file.FileIDCol,
+			Args:               []any{fileID},
+			ComparisonOperator: Equal,
+			LogicalOperator:    OperatorAnd,
+		},
+	}
+
+	err := f.UpdateFiles(fileOwnerID, cd, conditions)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// UpdateFiles updates the Files table based ClauseData and conditions.
+//
+// Errors will be returned if one occurs.
+// Certain columns are forbidden from being changed, and will return an error
+// if these are found.
+func (f *FileGateway) UpdateFiles(fileOwnerID string, cd ClauseData, conditions []WhereCondition) error {
+	cb := NewClauseBuilder()
+
+	setQ, err := cd.BuildSetQuery()
+	if err != nil {
+		return fmt.Errorf("failed to validate ClauseData: %v", err)
+	}
+
+	baseQuery := fmt.Sprintf("UPDATE %s", file.FileTableName) + " " + setQ
+
+	cb.Equal(file.FileOwnerIDCol, fileOwnerID)
+
+	err = cb.RegisterConditions(conditions)
+	if err != nil {
+		return fmt.Errorf("failed to register conditions: %v", err)
+	}
+
+	whereQ, args, err := cb.Build()
+	if err != nil {
+		return fmt.Errorf("failed to build WHERE clause: %v", err)
+	}
+
+	query := baseQuery + " " + whereQ
+
+	execArgs := []any{}
+
+	execArgs = append(execArgs, cd.Args...)
+	execArgs = append(execArgs, args...)
+
+	f.logUtil.LogQueryAndArgs(query, execArgs)
+
+	res, err := execQuery(f.database, query, execArgs...)
+	if err != nil {
+		return fmt.Errorf("failed to execute query: %v (args: %v)", err, execArgs)
+	}
+
+	f.logUtil.LogResultRows(res)
+
+	return nil
 }
 
 // AddFile adds slice of File structs to the File database.
@@ -103,20 +176,22 @@ func (f *FileGateway) AddFile(files []file.File) error {
 	query := fmt.Sprintf("INSERT INTO %s VALUES", file.FileTableName)
 	paramStr := BuildPlaceholder(f.fileFieldCount, len(files))
 
-	res, err := execQuery(f.database, query+" "+paramStr, flatFiles...)
+	query = query + " " + paramStr
+
+	f.logUtil.LogQueryAndArgs(query, flatFiles)
+
+	res, err := execQuery(f.database, query, flatFiles...)
 	if err != nil {
 		return fmt.Errorf("failed to insert into %s: %v", file.FileTableName, err)
 	}
 
-	rowCount, err := res.RowsAffected()
-	// TODO: add logging here
-	fmt.Printf("Rows inserted: %v", rowCount)
+	f.logUtil.LogResultRows(res)
 
 	return nil
 }
 
-// UpdateModifiedFile updates the modified date column to the current time.
-func (f *FileGateway) UpdateModifiedFile(fileOwnerID string, fileIDs []string) error {
+// UpdateModifiedFiles updates the modified date column to the current time.
+func (f *FileGateway) UpdateModifiedFiles(fileOwnerID string, fileIDs []string) error {
 	cb := NewClauseBuilder()
 
 	convIds := utils.ConvertToAny(fileIDs)
@@ -133,13 +208,14 @@ func (f *FileGateway) UpdateModifiedFile(fileOwnerID string, fileIDs []string) e
 	finalArgs := []any{time.Now().Format(time.DateTime)}
 	finalArgs = append(finalArgs, args...)
 
+	f.logUtil.LogQueryAndArgs(query, finalArgs)
+
 	res, err := execQuery(f.database, query, finalArgs...)
 	if err != nil {
 		return fmt.Errorf("failed to execute query: %v", err)
 	}
 
-	// TODO: logging
-	fmt.Println(res.RowsAffected())
+	f.logUtil.LogResultRows(res)
 
 	return nil
 }
@@ -169,18 +245,17 @@ func (f *FileGateway) DeleteFiles(fileOwnerID string, fileIDs []string) error {
 	)
 	query := baseQuery + " " + qCondition
 
-	// TODO: add logging
-	fmt.Println(query)
-
 	finalArgs := []any{time.Now().Format(time.DateTime)}
 	finalArgs = append(finalArgs, args...)
+
+	f.logUtil.LogQueryAndArgs(query, finalArgs)
 
 	res, err := execQuery(f.database, query, finalArgs...)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(res.RowsAffected())
+	f.logUtil.LogResultRows(res)
 
 	return nil
 }
@@ -203,13 +278,14 @@ func (f *FileGateway) RestoreFiles(fileOwnerID string, fileIDs []string) error {
 	baseQuery := fmt.Sprintf("UPDATE %s SET %s = NULL", file.FileTableName, file.DeletedOnCol)
 	query := baseQuery + " " + cond
 
-	rows, err := execQuery(f.database, query, args...)
+	f.logUtil.LogQueryAndArgs(query, args)
+
+	res, err := execQuery(f.database, query, args...)
 	if err != nil {
 		return fmt.Errorf("failed to execute query: %v", err)
 	}
 
-	// TODO: add logging
-	fmt.Println(rows.RowsAffected())
+	f.logUtil.LogResultRows(res)
 
 	return nil
 }

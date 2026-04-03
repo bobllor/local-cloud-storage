@@ -9,8 +9,6 @@ import (
 	"github.com/bobllor/cloud-project/src/file"
 )
 
-// TODO: add more testing for Batcher
-
 func TestBuildSingleQuery(t *testing.T) {
 	cb := ClauseBuilder{}
 
@@ -83,13 +81,11 @@ func TestEmptyClauseError(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
-func TestRegisterNoConditionsBatcher(t *testing.T) {
+func TestRegisterNoConditions(t *testing.T) {
 	cb := NewClauseBuilder()
 
-	b, err := NewBatcher(testUserAccountID)
-	assert.Nil(t, err)
-
-	err = cb.RegisterBatcher(b)
+	cb.Equal(file.FileOwnerIDCol, testUserAccountID)
+	err := cb.RegisterConditions([]WhereCondition{})
 	assert.Nil(t, err)
 
 	baseQuery := fmt.Sprintf("WHERE %s = ?", file.FileOwnerIDCol)
@@ -100,11 +96,8 @@ func TestRegisterNoConditionsBatcher(t *testing.T) {
 	assert.Equal(t, q, baseQuery)
 }
 
-func TestRegisterConditionsBatcher(t *testing.T) {
+func TestRegisterConditions(t *testing.T) {
 	cb := NewClauseBuilder()
-
-	b, err := NewBatcher(testUserAccountID)
-	assert.Nil(t, err)
 
 	conditions := []WhereCondition{
 		{
@@ -120,9 +113,9 @@ func TestRegisterConditionsBatcher(t *testing.T) {
 			LogicalOperator:    OperatorAnd,
 		},
 	}
-	b.AddWhereConditions(conditions)
 
-	err = cb.RegisterBatcher(b)
+	cb.Equal(file.FileOwnerIDCol, testUserAccountID)
+	err := cb.RegisterConditions(conditions)
 	assert.Nil(t, err)
 
 	baseQuery := fmt.Sprintf(

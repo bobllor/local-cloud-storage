@@ -1,8 +1,8 @@
 help:
 	@echo "Usage: make <command>\n"
 	@echo "Commands:"
-	@printf "%3sstart-test-db: Starts the test SQL Docker container\n"
-	@printf "%3sstop-test-db: Stops the test SQL Docker container\n"
+	@printf "%3sstart-testdb: Starts the test SQL Docker container\n"
+	@printf "%3sstop-testdb: Stops the test SQL Docker container\n"
 	@exit 0
 
 start-testdb:

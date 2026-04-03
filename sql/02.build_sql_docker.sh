@@ -6,14 +6,14 @@
 
 set -e
 
-root_password=${MARIADB_ROOT_PASSWORD}
+root_password=${MYSQL_ROOT_PASSWORD}
 
 sql(){
-    mariadb -u root -p$root_password -v -e "$1"
+    mysql -u root -p$root_password -v -e "$1"
 }
 
 sql_silent(){
-    mariadb -u root -p$root_password -e "$1"
+    mysql -u root -p$root_password -e "$1"
 }
 
 db_pw=${FILE_PASSWORD}

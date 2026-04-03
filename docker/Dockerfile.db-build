@@ -1,4 +1,4 @@
-FROM mariadb:lts AS master-db
+FROM mysql:lts-oracle AS master-db
 
 ARG DB_INIT="/docker-entrypoint-initdb.d"
 ARG PORT=3306
