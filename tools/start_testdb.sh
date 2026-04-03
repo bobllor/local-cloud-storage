@@ -11,10 +11,14 @@ declare -i max_attempts=7
 if [[ "$container_status" == "false" ]]; then
     echo "Starting container $c_name"
 
+    # volume will also share the container name
+    docker volume create "$c_name" | xargs -I x echo "Created test volume x"
+
     docker run --detach \
         --name "$c_name" \
         -p "$host_port:$c_port" \
         --env MYSQL_ALLOW_EMPTY_PASSWORD=yes \
+        --mount type=volume,src=$c_name,dst=/var/lib/mysql \
         --mount type=bind,src=/etc/timezone,dst=/etc/timezone,readonly \
         --mount type=bind,src=/etc/localtime,dst=/etc/localtime,readonly \
         mysql:lts-oracle 2>&1

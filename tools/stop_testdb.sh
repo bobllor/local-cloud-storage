@@ -11,6 +11,7 @@ if [[ "$container_status" == "true" ]]; then
     echo "Stopping container $c_name..."
 
     stop_docker_container $c_name
+    docker volume rm $c_name | xargs -I x echo "Removing test volume x"
 else
     echo "error: Container $c_name is not running"
 fi
