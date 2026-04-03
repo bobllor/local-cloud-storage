@@ -91,7 +91,7 @@ func (f *FileGateway) GetFiles(fileOwnerID string, conditions []WhereCondition) 
 	return files, nil
 }
 
-// UpdateFileByID updates a file row by ID.
+// UpdateFileByID updates a single file row by its file ID.
 //
 // cd is a ClauseData type used to target the columns and values to replace for the row.
 func (f *FileGateway) UpdateFileByID(fileOwnerID string, fileID string, cd ClauseData) error {
