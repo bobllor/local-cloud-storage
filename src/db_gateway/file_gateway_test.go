@@ -100,7 +100,7 @@ func TestUpdateFileByID(t *testing.T) {
 
 	assert.Equal(t, files[0].Name, newValue)
 
-	err = resetDefaultFileName(fDb)
+	err = resetDefaultFileRow(fDb, file.FileNameCol, testDefaultFileName)
 	assert.Nil(t, err)
 }
 
@@ -132,6 +132,9 @@ func TestDeleteFiles(t *testing.T) {
 	assert.Equal(t, qDate.Year(), now.Year())
 	assert.Equal(t, qDate.Month(), now.Month())
 	assert.Equal(t, qDate.Day(), now.Day())
+
+	err = resetDefaultFileRow(fDb, file.DeletedOnCol, nil)
+	assert.Nil(t, err)
 }
 
 func TestRestoreFiles(t *testing.T) {
@@ -196,6 +199,9 @@ func TestUpdateModifiedFile(t *testing.T) {
 	newDate := newFiles[0].ModifiedOn
 
 	assert.NotEqual(t, baseDate.Compare(newDate), -1)
+
+	err = resetDefaultFileRow(fDb, file.ModifiedOnCol, baseDate)
+	assert.Nil(t, err)
 }
 
 func TestAddDuplicateFileError(t *testing.T) {
@@ -257,7 +263,7 @@ func TestUpdateFiles(t *testing.T) {
 	assert.Equal(t, files[0].Name, newName)
 	assert.NotEqual(t, files[0].Name, baseName)
 
-	err = resetDefaultFileName(fDb)
+	err = resetDefaultFileRow(fDb, file.FileNameCol, testDefaultFileName)
 	assert.Nil(t, err)
 }
 
@@ -297,19 +303,19 @@ func getConditionByID(fileID string) []WhereCondition {
 	}
 }
 
-// getClauseDataFileName retrieves a default ClauseData that targets
-// the file name column and a given argument.
-func getClauseDataFileName(args ...any) ClauseData {
+// getClauseData retrieves a default ClauseData that targets
+// the a given column and given arguments.
+func getClauseData(column string, args ...any) ClauseData {
 	return ClauseData{
-		Columns: []string{file.FileNameCol},
+		Columns: []string{column},
 		Args:    args,
 	}
 }
 
 // resetDefaultFileName resets the default entry's file name to its default value.
 // The error must be handled.
-func resetDefaultFileName(fDb *FileGateway) error {
-	cd := getClauseDataFileName(testDefaultFileName)
+func resetDefaultFileRow(fDb *FileGateway, column string, args ...any) error {
+	cd := getClauseData(column, args...)
 
 	err := fDb.UpdateFileByID(testUserAccountID, testFileID, cd)
 	if err != nil {
