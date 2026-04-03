@@ -11,7 +11,7 @@ Requirements
 
 The host machine *must be a Unix device*. WSL is supported.
 Software requirements:
-- Go 1.24.6
+- Go >=1.25.0
 - Git
 - Docker
 - MariaDB
