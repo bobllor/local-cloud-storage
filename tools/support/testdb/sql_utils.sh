@@ -2,7 +2,7 @@
 
 # sql executes SQL commands passed in in the first argument.
 sql(){
-    mariadb -h 127.0.0.1 -P $host_port -u root -e "$1"
+    mysql -h 127.0.0.1 -P $host_port -u root -e "$1"
 }
 
 # check_container_status checks for the container status and returns true or false.

@@ -14,8 +14,8 @@ if [[ "$container_status" == "false" ]]; then
     docker run --detach \
         --name "$c_name" \
         -p "$host_port:$c_port" \
-        --env MARIADB_ALLOW_EMPTY_ROOT_PASSWORD=1 \
-        mariadb:lts 2>&1
+        --env MYSQL_ALLOW_EMPTY_PASSWORD=yes \
+        mysql:lts-oracle 2>&1
 
     init_status=false
     echo "Waiting for server connection..."
