@@ -1,12 +1,16 @@
 package dbgateway
 
 import (
+	"io"
+	"log"
 	"testing"
 	"time"
 
 	"github.com/bobllor/assert"
+	"github.com/bobllor/cloud-project/src/config"
 	"github.com/bobllor/cloud-project/src/file"
 	"github.com/bobllor/cloud-project/src/tests"
+	"github.com/bobllor/gologger"
 )
 
 // IMPORTANT: These tests require the test database to exist.
@@ -198,7 +202,7 @@ func TestUpdateModifiedFile(t *testing.T) {
 
 	newDate := newFiles[0].ModifiedOn
 
-	assert.NotEqual(t, baseDate.Compare(newDate), -1)
+	assert.Equal(t, baseDate.Compare(newDate), -1)
 
 	err = resetDefaultFileRow(fDb, file.ModifiedOnCol, baseDate)
 	assert.Nil(t, err)
@@ -280,14 +284,17 @@ func getTestFileGateway() (*FileGateway, error) {
 	addr := "127.0.0.1" + ":" + port
 	dbName := "TestLocalCloudStorage"
 
-	config := NewConfig(user, password, net, addr, dbName)
+	dbConfig := NewConfig(user, password, net, addr, dbName)
 
-	db, err := NewDatabase(config)
+	db, err := NewDatabase(dbConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	fDb := NewFileGateway(db)
+	logger := gologger.NewLogger(log.New(io.Discard, "", log.Ldate|log.Ltime), gologger.Lsilent)
+	stdConfig := config.NewConfig(logger)
+
+	fDb := NewFileGateway(db, stdConfig)
 
 	return fDb, nil
 }
