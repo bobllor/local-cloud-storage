@@ -115,9 +115,7 @@ func (c *ClauseBuilder) Build() (string, []any, error) {
 
 	clauseHolder := []string{}
 
-	for _, clause := range c.clauses {
-		clauseHolder = append(clauseHolder, clause)
-	}
+	clauseHolder = append(clauseHolder, c.clauses...)
 
 	clause := "WHERE " + strings.Join(clauseHolder, " ")
 

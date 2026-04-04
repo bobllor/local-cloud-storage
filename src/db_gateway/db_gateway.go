@@ -112,17 +112,40 @@ func execQuery(db *sql.DB, query string, args ...any) (sql.Result, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to start transaction: %v", err)
 	}
-	defer tx.Rollback()
 
 	res, err := tx.Exec(query, args...)
 	if err != nil {
+		tx.Rollback()
 		return nil, fmt.Errorf("failed to execute %s: %v", query, err)
 	}
 
 	err = tx.Commit()
 	if err != nil {
+		tx.Rollback()
 		return nil, fmt.Errorf("failed to commit transaction for %s: %v", file.FileTableName, err)
 	}
 
 	return res, err
+}
+
+// devDropRows is used to drop rows from a table. This is only for developmental
+// purposes and is not intended to be used on production.
+func devDropRows(db *sql.DB, table string, column string, args ...any) (sql.Result, error) {
+	cb := NewClauseBuilder()
+
+	cb.In(column, args...)
+
+	cbQ, newArgs, err := cb.Build()
+	if err != nil {
+		return nil, err
+	}
+
+	query := fmt.Sprintf("DELETE FROM %s", table) + " " + cbQ
+
+	res, err := execQuery(db, query, newArgs...)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }

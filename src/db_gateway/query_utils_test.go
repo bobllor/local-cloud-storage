@@ -14,9 +14,9 @@ func TestBuildSingleQuery(t *testing.T) {
 
 	arg1 := "afileid"
 	expectedArgs := 1
-	expectedQuery := fmt.Sprintf("WHERE %s = ?", file.FileIDCol)
+	expectedQuery := fmt.Sprintf("WHERE %s = ?", file.ColumnFileID)
 
-	cb.Equal(file.FileIDCol, arg1)
+	cb.Equal(file.ColumnFileID, arg1)
 
 	q, args, err := cb.Build()
 	assert.Nil(t, err)
@@ -33,9 +33,9 @@ func TestBuildAndQuery(t *testing.T) {
 	arg1 := "fileidhere"
 	arg2 := "filename.txt"
 
-	expectedQuery := fmt.Sprintf("WHERE %s = ? AND %s = ?", file.FileIDCol, file.FileNameCol)
+	expectedQuery := fmt.Sprintf("WHERE %s = ? AND %s = ?", file.ColumnFileID, file.ColumnFileName)
 
-	cb.Equal(file.FileIDCol, arg1).And().Equal(file.FileNameCol, arg2)
+	cb.Equal(file.ColumnFileID, arg1).And().Equal(file.ColumnFileName, arg2)
 
 	q, args, err := cb.Build()
 	assert.Nil(t, err)
@@ -51,9 +51,9 @@ func TestInQuery(t *testing.T) {
 	cb := NewClauseBuilder()
 
 	expectedArgs := 4
-	expectedQuery := fmt.Sprintf("WHERE %s = ? AND %s IN (?,?,?)", file.FileOwnerIDCol, file.FileNameCol)
+	expectedQuery := fmt.Sprintf("WHERE %s = ? AND %s IN (?,?,?)", file.ColumnFileOwnerID, file.ColumnFileName)
 
-	cb.Equal(file.FileOwnerIDCol, "file-owner").And().In(file.FileNameCol, "test1.txt", "test2.txt", "test3.txt")
+	cb.Equal(file.ColumnFileOwnerID, "file-owner").And().In(file.ColumnFileName, "test1.txt", "test2.txt", "test3.txt")
 
 	q, args, err := cb.Build()
 	assert.Nil(t, err)
@@ -65,9 +65,9 @@ func TestInQuery(t *testing.T) {
 func TestEndOperatorClauseError(t *testing.T) {
 	cb := NewClauseBuilder()
 
-	cb.Equal(file.FileOwnerIDCol, "fileidhere").
+	cb.Equal(file.ColumnFileOwnerID, "fileidhere").
 		And().
-		Equal(file.FileNameCol, "filenamehere.txt").
+		Equal(file.ColumnFileName, "filenamehere.txt").
 		And().And().Or()
 
 	_, _, err := cb.Build()
@@ -84,11 +84,11 @@ func TestEmptyClauseError(t *testing.T) {
 func TestRegisterNoConditions(t *testing.T) {
 	cb := NewClauseBuilder()
 
-	cb.Equal(file.FileOwnerIDCol, testUserAccountID)
+	cb.Equal(file.ColumnFileOwnerID, testUserAccountID)
 	err := cb.RegisterConditions([]WhereCondition{})
 	assert.Nil(t, err)
 
-	baseQuery := fmt.Sprintf("WHERE %s = ?", file.FileOwnerIDCol)
+	baseQuery := fmt.Sprintf("WHERE %s = ?", file.ColumnFileOwnerID)
 
 	q, _, err := cb.Build()
 	assert.Nil(t, err)
@@ -101,28 +101,28 @@ func TestRegisterConditions(t *testing.T) {
 
 	conditions := []WhereCondition{
 		{
-			Column:             file.FileIDCol,
+			Column:             file.ColumnFileID,
 			Args:               []any{testFileID},
 			ComparisonOperator: Equal,
 			LogicalOperator:    OperatorAnd,
 		},
 		{
-			Column:             file.ParentIDCol,
+			Column:             file.ColumnParentID,
 			Args:               []any{"1234", "4567", "1230", "1350"},
 			ComparisonOperator: In,
 			LogicalOperator:    OperatorAnd,
 		},
 	}
 
-	cb.Equal(file.FileOwnerIDCol, testUserAccountID)
+	cb.Equal(file.ColumnFileOwnerID, testUserAccountID)
 	err := cb.RegisterConditions(conditions)
 	assert.Nil(t, err)
 
 	baseQuery := fmt.Sprintf(
 		"WHERE %s = ? AND %s = ? AND %s IN (?,?,?,?)",
-		file.FileOwnerIDCol,
-		file.FileIDCol,
-		file.ParentIDCol,
+		file.ColumnFileOwnerID,
+		file.ColumnFileID,
+		file.ColumnParentID,
 	)
 
 	q, _, err := cb.Build()
@@ -156,7 +156,7 @@ func TestMultiBuildPlaceholder(t *testing.T) {
 }
 
 func TestSingleSetPlaceholder(t *testing.T) {
-	columns := []string{file.FileNameCol}
+	columns := []string{file.ColumnFileName}
 
 	query := BuildSetPlaceholder(columns)
 
@@ -177,7 +177,7 @@ func TestSingleSetPlaceholder(t *testing.T) {
 }
 
 func TestMultiSetPlaceholder(t *testing.T) {
-	columns := []string{file.FileNameCol, file.FileIDCol, file.FileSizeCol}
+	columns := []string{file.ColumnFileName, file.ColumnFileID, file.ColumnFileSize}
 
 	query := BuildSetPlaceholder(columns)
 

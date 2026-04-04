@@ -38,7 +38,7 @@ type FileGateway struct {
 func (f *FileGateway) GetAllFiles(fileOwnerID string) ([]file.File, error) {
 	cb := NewClauseBuilder()
 	baseQuery := fmt.Sprintf("SELECT * FROM %s", file.FileTableName)
-	cb.Equal(file.FileOwnerIDCol, fileOwnerID)
+	cb.Equal(file.ColumnFileOwnerID, fileOwnerID)
 
 	con, args, err := cb.Build()
 	if err != nil {
@@ -66,7 +66,7 @@ func (f *FileGateway) GetFiles(fileOwnerID string, conditions []WhereCondition) 
 
 	baseQuery := fmt.Sprintf("SELECT * FROM %s", file.FileTableName)
 
-	cb.Equal(file.FileOwnerIDCol, fileOwnerID)
+	cb.Equal(file.ColumnFileOwnerID, fileOwnerID)
 
 	err := cb.RegisterConditions(conditions)
 	if err != nil {
@@ -101,7 +101,7 @@ func (f *FileGateway) GetFiles(fileOwnerID string, conditions []WhereCondition) 
 func (f *FileGateway) UpdateFileByID(fileOwnerID string, fileID string, cd ClauseData) error {
 	conditions := []WhereCondition{
 		{
-			Column:             file.FileIDCol,
+			Column:             file.ColumnFileID,
 			Args:               []any{fileID},
 			ComparisonOperator: Equal,
 			LogicalOperator:    OperatorAnd,
@@ -131,7 +131,7 @@ func (f *FileGateway) UpdateFiles(fileOwnerID string, cd ClauseData, conditions 
 
 	baseQuery := fmt.Sprintf("UPDATE %s", file.FileTableName) + " " + setQ
 
-	cb.Equal(file.FileOwnerIDCol, fileOwnerID)
+	cb.Equal(file.ColumnFileOwnerID, fileOwnerID)
 
 	err = cb.RegisterConditions(conditions)
 	if err != nil {
@@ -196,14 +196,14 @@ func (f *FileGateway) UpdateModifiedFiles(fileOwnerID string, fileIDs []string) 
 
 	convIds := utils.ConvertToAny(fileIDs)
 
-	cb.Equal(file.FileOwnerIDCol, fileOwnerID).And().In(file.FileIDCol, convIds...)
+	cb.Equal(file.ColumnFileOwnerID, fileOwnerID).And().In(file.ColumnFileID, convIds...)
 
 	qCon, args, err := cb.Build()
 	if err != nil {
 		return fmt.Errorf("failed to build query: %v", err)
 	}
 
-	query := fmt.Sprintf("UPDATE %s SET %s = ?", file.FileTableName, file.ModifiedOnCol) + " " + qCon
+	query := fmt.Sprintf("UPDATE %s SET %s = ?", file.FileTableName, file.ColumnModifiedOn) + " " + qCon
 
 	finalArgs := []any{time.Now().Format(time.DateTime)}
 	finalArgs = append(finalArgs, args...)
@@ -231,7 +231,7 @@ func (f *FileGateway) DeleteFiles(fileOwnerID string, fileIDs []string) error {
 
 	convFileIDs := utils.ConvertToAny(fileIDs)
 
-	cb.Equal(file.FileOwnerIDCol, fileOwnerID).And().In(file.FileIDCol, convFileIDs...)
+	cb.Equal(file.ColumnFileOwnerID, fileOwnerID).And().In(file.ColumnFileID, convFileIDs...)
 
 	qCondition, args, err := cb.Build()
 	if err != nil {
@@ -241,7 +241,7 @@ func (f *FileGateway) DeleteFiles(fileOwnerID string, fileIDs []string) error {
 	baseQuery := fmt.Sprintf(
 		"UPDATE %s SET %s = ?",
 		file.FileTableName,
-		file.DeletedOnCol,
+		file.ColumnDeletedOn,
 	)
 	query := baseQuery + " " + qCondition
 
@@ -264,18 +264,18 @@ func (f *FileGateway) DeleteFiles(fileOwnerID string, fileIDs []string) error {
 func (f *FileGateway) RestoreFiles(fileOwnerID string, fileIDs []string) error {
 	cb := NewClauseBuilder()
 
-	cb.Equal(file.FileOwnerIDCol, fileOwnerID)
+	cb.Equal(file.ColumnFileOwnerID, fileOwnerID)
 
 	convIDs := utils.ConvertToAny(fileIDs)
 
-	cb.And().In(file.FileIDCol, convIDs...)
+	cb.And().In(file.ColumnFileID, convIDs...)
 
 	cond, args, err := cb.Build()
 	if err != nil {
 		return fmt.Errorf("failed to build conditions: %v", err)
 	}
 
-	baseQuery := fmt.Sprintf("UPDATE %s SET %s = NULL", file.FileTableName, file.DeletedOnCol)
+	baseQuery := fmt.Sprintf("UPDATE %s SET %s = NULL", file.FileTableName, file.ColumnDeletedOn)
 	query := baseQuery + " " + cond
 
 	f.logUtil.LogQueryAndArgs(query, args)
@@ -318,7 +318,7 @@ func (f *FileGateway) getFiles(rows *sql.Rows) ([]file.File, error) {
 		dateFormat := time.DateTime
 		modifiedDate, err := time.Parse(dateFormat, string(modifiedTimeSl))
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse %s column: %v", file.ModifiedOnCol, err)
+			return nil, fmt.Errorf("failed to parse %s column: %v", file.ColumnModifiedOn, err)
 		}
 
 		var deletedDate *time.Time
@@ -326,7 +326,7 @@ func (f *FileGateway) getFiles(rows *sql.Rows) ([]file.File, error) {
 		if len(deletedTimeSl) > 0 {
 			dateTemp, err := time.Parse(dateFormat, string(deletedTimeSl))
 			if err != nil {
-				return nil, fmt.Errorf("failed to parse %s column: %v", file.DeletedOnCol, err)
+				return nil, fmt.Errorf("failed to parse %s column: %v", file.ColumnDeletedOn, err)
 			}
 
 			deletedDate = &dateTemp

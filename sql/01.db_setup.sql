@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS UserAccount(
     Username varchar(30) NOT NULL UNIQUE,
     PasswordHash varchar(255) NOT NULL,
     CreatedOn DATETIME,
-    SeenOn DATETIME,
+    Active BOOL DEFAULT 1,
     PRIMARY KEY (AccountID)
 );
 
