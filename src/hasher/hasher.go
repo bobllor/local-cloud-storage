@@ -115,9 +115,25 @@ func ParsePHC(phc string) (*HashResult, error) {
 	return hashRes, nil
 }
 
-func Compare(password string, hr *HashResult) bool {
+func Compare(password string, hr *HashResult) (bool, error) {
+	convRaw, err := hr.Decode()
+	if err != nil {
+		return false, err
+	}
 
-	return true
+	raw, err := Hash(password, convRaw.Salt, convRaw.Params)
+	if err != nil {
+		return false, err
+	}
+
+	compareRes := raw.Encode()
+	storedHash := hr.Hash
+
+	if compareRes.Hash != storedHash {
+		return false, nil
+	}
+
+	return true, nil
 }
 
 type RawHash struct {
@@ -126,8 +142,8 @@ type RawHash struct {
 	Params Argon2Params
 }
 
-// Encode encodes the RawHash data into a hash string in the PHC format.
-func (rh *RawHash) Encode() string {
+// Encode encodes the RawHash data into a new HashResult.
+func (rh *RawHash) Encode() *HashResult {
 	salt := base64.RawStdEncoding.EncodeToString(rh.Salt)
 	hash := base64.RawStdEncoding.EncodeToString(rh.Hash)
 
@@ -135,7 +151,7 @@ func (rh *RawHash) Encode() string {
 	// parallelism is equal to the Threads option of Argon2Params
 	phcString := "$%s$v=%d$m=%d,t=%d,p=%d$%s$%s"
 
-	argonStr := fmt.Sprintf(
+	phc := fmt.Sprintf(
 		phcString,
 		Argon2ID,
 		ArgonVersion,
@@ -146,22 +162,30 @@ func (rh *RawHash) Encode() string {
 		hash,
 	)
 
-	return argonStr
+	res := &HashResult{
+		Salt:   salt,
+		Hash:   hash,
+		Params: rh.Params,
+		PHC:    phc,
+	}
+
+	return res
 }
 
 type HashResult struct {
 	Salt   string
 	Hash   string
 	Params Argon2Params
+	PHC    string
 }
 
 // Decode decodes the hash result back into a RawHash struct.
 func (hr *HashResult) Decode() (*RawHash, error) {
-	salt, err := base64.RawStdEncoding.DecodeString(hr.Salt)
+	salt, err := hr.DecodeSalt()
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode salt: %v", err)
 	}
-	hash, err := base64.RawStdEncoding.DecodeString(hr.Hash)
+	hash, err := hr.DecodeHash()
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode hash: %v", err)
 	}
@@ -173,6 +197,26 @@ func (hr *HashResult) Decode() (*RawHash, error) {
 	}
 
 	return raw, nil
+}
+
+// DecodeSalt decodes the base64 salt string back to its raw form.
+func (hr *HashResult) DecodeSalt() ([]byte, error) {
+	salt, err := base64.RawStdEncoding.DecodeString(hr.Salt)
+	if err != nil {
+		return nil, err
+	}
+
+	return salt, nil
+}
+
+// DecodeHash decodes the base64 salt string back to its raw form.
+func (hr *HashResult) DecodeHash() ([]byte, error) {
+	hash, err := base64.RawStdEncoding.DecodeString(hr.Hash)
+	if err != nil {
+		return nil, err
+	}
+
+	return hash, nil
 }
 
 func getSalt(size int) ([]byte, error) {
