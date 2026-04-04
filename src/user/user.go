@@ -1,0 +1,38 @@
+package user
+
+import (
+	"time"
+)
+
+const (
+	UserColumnSize     = 5
+	UserTableName      = "UserAccount"
+	ColumnAccountID    = "AccountID"
+	ColumnUsername     = "Username"
+	ColumnPasswordHash = "PasswordHash"
+	ColumnCreatedOn    = "CreatedOn"
+	ColumnActive       = "Active"
+)
+
+type UserAccount struct {
+	AccountID    string
+	Username     string
+	PasswordHash string
+	CreatedOn    time.Time
+	Active       bool
+}
+
+// ToArgs converts the struct into an any slice.
+// This is used for query arguments.
+func (ua *UserAccount) ToArgs() []any {
+	args := []any{}
+
+	args = append(args, ua.AccountID)
+	args = append(args, ua.Username)
+	args = append(args, ua.PasswordHash)
+	// converted to date string for adding as a date
+	args = append(args, ua.CreatedOn.UTC())
+	args = append(args, ua.Active)
+
+	return args
+}
