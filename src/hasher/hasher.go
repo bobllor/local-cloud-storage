@@ -91,19 +91,33 @@ func ParsePHC(phc string) (*HashResult, error) {
 		return nil, err
 	}
 
+	decodedSalt, err := base64.RawStdEncoding.DecodeString(salt)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode salt string: %v", err)
+	}
+	decodedHash, err := base64.RawStdEncoding.DecodeString(hash)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode hash string: %v", err)
+	}
+
 	hashRes := &HashResult{
 		Salt: salt,
 		Hash: hash,
 		Params: Argon2Params{
-			SaltLength: len(salt),
+			SaltLength: len(decodedSalt),
 			Memory:     memory,
 			Time:       time,
 			Threads:    threads,
-			KeyLength:  uint32(len(hash)),
+			KeyLength:  uint32(len(decodedHash)),
 		},
 	}
 
 	return hashRes, nil
+}
+
+func Compare(password string, hr *HashResult) bool {
+
+	return true
 }
 
 type RawHash struct {
@@ -141,7 +155,7 @@ type HashResult struct {
 	Params Argon2Params
 }
 
-// Decode decodes the hash result back into a raw hash.
+// Decode decodes the hash result back into a RawHash struct.
 func (hr *HashResult) Decode() (*RawHash, error) {
 	salt, err := base64.RawStdEncoding.DecodeString(hr.Salt)
 	if err != nil {
