@@ -8,6 +8,18 @@ import (
 	"github.com/bobllor/assert"
 )
 
+var baseHashInfo = struct {
+	Password string
+	Salt     []byte
+	PHC      string
+}{
+	Password: "anothertestpassword",
+	Salt:     []byte("A7iRBwsrtjiNOhnWeAGgng"),
+	PHC:      "$argon2id$v=19$m=65536,t=2,p=4$QTdpUkJ3c3J0amlOT2huV2VBR2duZw$vzICl8p5CVfpGfypDV4yIVULsYatAmir6B8nHWtcPtE",
+}
+
+// generated from a random site online (argon2 online) for comparison
+
 func TestSalt(t *testing.T) {
 	saltSize := 32
 	salt, err := getSalt(32)
@@ -23,34 +35,63 @@ func TestHashPassword(t *testing.T) {
 }
 
 func TestHashToString(t *testing.T) {
-	password := "anothertestpassword"
-	baseSalt := []byte("A7iRBwsrtjiNOhnWeAGgng")
-
-	raw, err := Hash(password, baseSalt, DefaultArgon2Params)
+	raw, err := Hash(baseHashInfo.Password, baseHashInfo.Salt, DefaultArgon2Params)
 	assert.Nil(t, err)
 
-	// generated from a random site online (argon2 online) for comparison
-	baseEncode := "$argon2id$v=19$m=65536,t=2,p=4$QTdpUkJ3c3J0amlOT2huV2VBR2duZw$vzICl8p5CVfpGfypDV4yIVULsYatAmir6B8nHWtcPtE"
+	res := raw.Encode()
 
-	assert.Equal(t, raw.Encode(), baseEncode)
+	assert.Equal(t, res.PHC, baseHashInfo.PHC)
 }
 
 func TestParsePHC(t *testing.T) {
+	hashRes, err := ParsePHC(baseHashInfo.PHC)
+	assert.Nil(t, err)
+
+	assert.Equal(t, strings.Contains(baseHashInfo.PHC, hashRes.Hash), true)
+	assert.Equal(t, strings.Contains(baseHashInfo.PHC, hashRes.Salt), true)
+	assert.Equal(t, strings.Contains(baseHashInfo.PHC, fmt.Sprintf("m=%d", hashRes.Params.Memory)), true)
+	assert.Equal(t, strings.Contains(baseHashInfo.PHC, fmt.Sprintf("t=%d", hashRes.Params.Time)), true)
+	assert.Equal(t, strings.Contains(baseHashInfo.PHC, fmt.Sprintf("p=%d", hashRes.Params.Threads)), true)
+}
+
+func TestTrueCompare(t *testing.T) {
+	res, err := ParsePHC(baseHashInfo.PHC)
+	assert.Nil(t, err)
+
+	status, err := Compare(baseHashInfo.Password, res)
+	assert.Nil(t, err)
+
+	assert.Equal(t, status, true)
+}
+
+func TestFalseCompare(t *testing.T) {
+	password := "fdsafdsafdsa"
+
+	baseRes, err := ParsePHC(baseHashInfo.PHC)
+	assert.Nil(t, err)
+
+	status, err := Compare(password, baseRes)
+	assert.Nil(t, err)
+
+	assert.Equal(t, status, false)
+}
+
+func TestConvertRawToResToRaw(t *testing.T) {
 	password := "password"
 
 	raw, err := Hash(password, nil, DefaultArgon2Params)
 	assert.Nil(t, err)
 
-	phc := raw.Encode()
+	hashRes := raw.Encode()
 
-	hashRes, err := ParsePHC(phc)
+	parsedRes, err := ParsePHC(hashRes.PHC)
 	assert.Nil(t, err)
 
-	assert.Equal(t, strings.Contains(phc, hashRes.Hash), true)
-	assert.Equal(t, strings.Contains(phc, hashRes.Salt), true)
-	assert.Equal(t, strings.Contains(phc, fmt.Sprintf("m=%d", hashRes.Params.Memory)), true)
-	assert.Equal(t, strings.Contains(phc, fmt.Sprintf("t=%d", hashRes.Params.Time)), true)
-	assert.Equal(t, strings.Contains(phc, fmt.Sprintf("p=%d", hashRes.Params.Threads)), true)
+	convRaw, err := parsedRes.Decode()
+	assert.Nil(t, err)
+
+	assert.Equal(t, convRaw.Params.KeyLength, raw.Params.KeyLength)
+	assert.Equal(t, convRaw.Params.SaltLength, raw.Params.SaltLength)
 }
 
 func TestNormalParseParamStr(t *testing.T) {
