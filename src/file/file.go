@@ -11,17 +11,17 @@ import (
 const (
 	// FileColumnSize is the amount of columns used for the Files table.
 	// It is equal to the public fields of the [File] struct.
-	FileColumnSize int    = 9
-	FileTableName  string = "File"
-	FileOwnerIDCol string = "FileOwnerID"
-	FileNameCol    string = "FileName"
-	FileTypeCol    string = "FileType"
-	FileIDCol      string = "FileID"
-	ParentIDCol    string = "ParentID"
-	FilePathCol    string = "FilePath"
-	FileSizeCol    string = "FileSize"
-	ModifiedOnCol  string = "ModifiedOn"
-	DeletedOnCol   string = "DeletedOn"
+	FileColumnSize    int    = 9
+	FileTableName     string = "File"
+	ColumnFileOwnerID string = "FileOwnerID"
+	ColumnFileName    string = "FileName"
+	ColumnFileType    string = "FileType"
+	ColumnFileID      string = "FileID"
+	ColumnParentID    string = "ParentID"
+	ColumnFilePath    string = "FilePath"
+	ColumnFileSize    string = "FileSize"
+	ColumnModifiedOn  string = "ModifiedOn"
+	ColumnDeletedOn   string = "DeletedOn"
 )
 
 // Read returns a File slice for all files found in root.
