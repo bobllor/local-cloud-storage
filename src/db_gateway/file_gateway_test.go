@@ -47,7 +47,7 @@ func TestGetFile(t *testing.T) {
 
 	conditions := []WhereCondition{
 		{
-			Column:             file.FileIDCol,
+			Column:             file.ColumnFileID,
 			Args:               []any{testFileID},
 			LogicalOperator:    OperatorAnd,
 			ComparisonOperator: Equal,
@@ -90,7 +90,7 @@ func TestAddFile(t *testing.T) {
 	assert.NotEqual(t, len(qFiles), 1)
 
 	fmt.Println(fileIDs)
-	_, err = devDropRows(fDb.database, file.FileTableName, file.FileIDCol, utils.ConvertToAny(fileIDs)...)
+	_, err = devDropRows(fDb.database, file.FileTableName, file.ColumnFileID, utils.ConvertToAny(fileIDs)...)
 	assert.Nil(t, err)
 }
 
@@ -101,7 +101,7 @@ func TestUpdateFileByID(t *testing.T) {
 	newValue := "this.is.a.text.file.txt"
 
 	cd := ClauseData{
-		Columns: []string{file.FileNameCol},
+		Columns: []string{file.ColumnFileName},
 		Args:    []any{newValue},
 	}
 
@@ -113,7 +113,7 @@ func TestUpdateFileByID(t *testing.T) {
 
 	assert.Equal(t, files[0].Name, newValue)
 
-	err = resetDefaultFileRow(fDb, file.FileNameCol, testDefaultFileName)
+	err = resetDefaultFileRow(fDb, file.ColumnFileName, testDefaultFileName)
 	assert.Nil(t, err)
 }
 
@@ -126,7 +126,7 @@ func TestDeleteFiles(t *testing.T) {
 
 	conditions := []WhereCondition{
 		{
-			Column:             file.FileIDCol,
+			Column:             file.ColumnFileID,
 			Args:               []any{testFileID},
 			LogicalOperator:    OperatorAnd,
 			ComparisonOperator: Equal,
@@ -146,7 +146,7 @@ func TestDeleteFiles(t *testing.T) {
 	assert.Equal(t, qDate.Month(), now.Month())
 	assert.Equal(t, qDate.Day(), now.Day())
 
-	err = resetDefaultFileRow(fDb, file.DeletedOnCol, nil)
+	err = resetDefaultFileRow(fDb, file.ColumnDeletedOn, nil)
 	assert.Nil(t, err)
 }
 
@@ -156,7 +156,7 @@ func TestRestoreFiles(t *testing.T) {
 
 	conditions := []WhereCondition{
 		{
-			Column:             file.FileIDCol,
+			Column:             file.ColumnFileID,
 			Args:               []any{testFileID},
 			LogicalOperator:    OperatorAnd,
 			ComparisonOperator: Equal,
@@ -191,7 +191,7 @@ func TestUpdateModifiedFile(t *testing.T) {
 
 	conditions := []WhereCondition{
 		{
-			Column:             file.FileIDCol,
+			Column:             file.ColumnFileID,
 			Args:               []any{testFileID},
 			LogicalOperator:    OperatorAnd,
 			ComparisonOperator: Equal,
@@ -213,7 +213,7 @@ func TestUpdateModifiedFile(t *testing.T) {
 
 	assert.Equal(t, baseDate.Compare(newDate), -1)
 
-	err = resetDefaultFileRow(fDb, file.ModifiedOnCol, baseDate)
+	err = resetDefaultFileRow(fDb, file.ColumnModifiedOn, baseDate)
 	assert.Nil(t, err)
 }
 
@@ -249,13 +249,13 @@ func TestUpdateFiles(t *testing.T) {
 	newName := "this.isa.filename.txt"
 
 	cd := ClauseData{
-		Columns: []string{file.FileNameCol},
+		Columns: []string{file.ColumnFileName},
 		Args:    []any{newName},
 	}
 
 	conditions := []WhereCondition{
 		{
-			Column:             file.FileIDCol,
+			Column:             file.ColumnFileID,
 			Args:               []any{testFileID},
 			ComparisonOperator: Equal,
 			LogicalOperator:    OperatorAnd,
@@ -276,7 +276,7 @@ func TestUpdateFiles(t *testing.T) {
 	assert.Equal(t, files[0].Name, newName)
 	assert.NotEqual(t, files[0].Name, baseName)
 
-	err = resetDefaultFileRow(fDb, file.FileNameCol, testDefaultFileName)
+	err = resetDefaultFileRow(fDb, file.ColumnFileName, testDefaultFileName)
 	assert.Nil(t, err)
 }
 
@@ -285,16 +285,7 @@ func TestUpdateFiles(t *testing.T) {
 //
 // This function does not start the test database instance.
 func getTestFileGateway() (*FileGateway, error) {
-	port := "3307"
-
-	user := "root"
-	password := ""
-	net := "tcp"
-	addr := "127.0.0.1" + ":" + port
-	dbName := "TestLocalCloudStorage"
-
-	dbConfig := NewConfig(user, password, net, addr, dbName)
-
+	dbConfig := newTestDBConfig()
 	db, err := NewDatabase(dbConfig)
 	if err != nil {
 		return nil, err
@@ -311,7 +302,7 @@ func getTestFileGateway() (*FileGateway, error) {
 func getConditionByID(fileID string) []WhereCondition {
 	return []WhereCondition{
 		{
-			Column:             file.FileIDCol,
+			Column:             file.ColumnFileID,
 			Args:               []any{fileID},
 			ComparisonOperator: Equal,
 			LogicalOperator:    OperatorAnd,
