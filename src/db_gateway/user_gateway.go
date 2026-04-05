@@ -15,7 +15,7 @@ type UserGateway struct {
 	database       *sql.DB
 	userFieldCount int
 	config         *config.Config
-	util           LogUtility
+	util           DBUtility
 }
 
 func NewUserGateway(db *sql.DB, config *config.Config) *UserGateway {
@@ -23,7 +23,7 @@ func NewUserGateway(db *sql.DB, config *config.Config) *UserGateway {
 		database:       db,
 		userFieldCount: user.UserColumnSize,
 		config:         config,
-		util: LogUtility{
+		util: DBUtility{
 			log: config.Log,
 		},
 	}
@@ -67,4 +67,42 @@ func (ug *UserGateway) AddUser(username string, password string) (*user.UserAcco
 	ug.util.LogResultRows(res)
 
 	return acc, err
+}
+
+// GetUser retrieves the full row of the user.
+func (ug *UserGateway) GetUser(accountID string) (*user.UserAccount, error) {
+	cb := NewClauseBuilder()
+	cb.Equal(user.ColumnAccountID, accountID)
+
+	baseQuery := fmt.Sprintf("SELECT * FROM %s", user.UserTableName)
+
+	cbQ, args, err := cb.Build()
+	if err != nil {
+		return nil, err
+	}
+
+	user := []user.UserAccount{}
+
+	query := baseQuery + " " + cbQ
+	rows, err := ug.database.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	err = SelectRows(rows, &user)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(user) == 0 {
+		return nil, fmt.Errorf("failed to retrieve row with the ID %s", accountID)
+	}
+
+	return &user[0], nil
+}
+
+// NewSession creates a new entry for the Session table, generating
+// a new session ID associated with the account ID to maintain a session.
+func (ug *UserGateway) NewSession(accountID string) {
+
 }
