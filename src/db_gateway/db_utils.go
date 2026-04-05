@@ -17,6 +17,9 @@ import (
 func SelectRows(rows *sql.Rows, src interface{}) error {
 	v := reflect.ValueOf(src)
 
+	if rows == nil {
+		return errors.New("rows cannot be nil")
+	}
 	if v.Kind() != reflect.Ptr || v.Elem().Type().Kind() != reflect.Slice {
 		return errors.New("src interface must be a pointer to a slice")
 	}
