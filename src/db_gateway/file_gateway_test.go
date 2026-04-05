@@ -1,7 +1,6 @@
 package dbgateway
 
 import (
-	"fmt"
 	"io"
 	"log"
 	"testing"
@@ -88,8 +87,8 @@ func TestAddFile(t *testing.T) {
 
 	// only 1 row exists by default, afterwards it adds however many from files
 	assert.NotEqual(t, len(qFiles), 1)
+	assert.NotEqual(t, len(qFiles), 0)
 
-	fmt.Println(fileIDs)
 	_, err = devDropRows(fDb.database, file.FileTableName, file.ColumnFileID, utils.ConvertToAny(fileIDs)...)
 	assert.Nil(t, err)
 }
