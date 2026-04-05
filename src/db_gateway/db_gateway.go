@@ -40,7 +40,9 @@ func NewConfig(user string, passwd string, net string, addr string, dbName strin
 	c.Net = net
 	c.Addr = addr
 	c.DBName = dbName
+
 	c.AllowNativePasswords = true
+	c.ParseTime = true
 
 	return c
 }
@@ -130,6 +132,8 @@ func execQuery(db *sql.DB, query string, args ...any) (sql.Result, error) {
 
 // devDropRows is used to drop rows from a table. This is only for developmental
 // purposes and is not intended to be used on production.
+//
+// column is used to target the column where the row is in the given slice of args.
 func devDropRows(db *sql.DB, table string, column string, args ...any) (sql.Result, error) {
 	cb := NewClauseBuilder()
 
