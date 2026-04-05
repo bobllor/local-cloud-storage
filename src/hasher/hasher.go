@@ -65,7 +65,7 @@ func Hash(password string, salt []byte, params Argon2Params) (*RawHash, error) {
 }
 
 // ParsePHC parses a PHC string and returns a HashResult
-// containing the information that resulted in the hashed password
+// containing the information that results in the hashed password
 // with Argon2ID.
 func ParsePHC(phc string) (*HashResult, error) {
 	// 6 is the valid length
@@ -82,6 +82,7 @@ func ParsePHC(phc string) (*HashResult, error) {
 	phcSplit = phcSplit[1:]
 
 	// only the last 3 elements are relevant for this project
+	// argon2i and argon2d are not supported.
 	paramStr := phcSplit[2]
 	salt := phcSplit[3]
 	hash := phcSplit[4]
@@ -115,6 +116,8 @@ func ParsePHC(phc string) (*HashResult, error) {
 	return hashRes, nil
 }
 
+// Compare hashes a given password and compares it to an existing HashResult.
+// It will return true or false, or an error if one occurs.
 func Compare(password string, hr *HashResult) (bool, error) {
 	convRaw, err := hr.Decode()
 	if err != nil {
@@ -209,7 +212,7 @@ func (hr *HashResult) DecodeSalt() ([]byte, error) {
 	return salt, nil
 }
 
-// DecodeHash decodes the base64 salt string back to its raw form.
+// DecodeHash decodes the base64 hash string back to its raw form.
 func (hr *HashResult) DecodeHash() ([]byte, error) {
 	hash, err := base64.RawStdEncoding.DecodeString(hr.Hash)
 	if err != nil {
