@@ -15,10 +15,9 @@ var baseHashInfo = struct {
 }{
 	Password: "anothertestpassword",
 	Salt:     []byte("A7iRBwsrtjiNOhnWeAGgng"),
-	PHC:      "$argon2id$v=19$m=65536,t=2,p=4$QTdpUkJ3c3J0amlOT2huV2VBR2duZw$vzICl8p5CVfpGfypDV4yIVULsYatAmir6B8nHWtcPtE",
+	// generated from a random site online (argon2 online) for comparison
+	PHC: "$argon2id$v=19$m=65536,t=2,p=4$QTdpUkJ3c3J0amlOT2huV2VBR2duZw$vzICl8p5CVfpGfypDV4yIVULsYatAmir6B8nHWtcPtE",
 }
-
-// generated from a random site online (argon2 online) for comparison
 
 func TestSalt(t *testing.T) {
 	saltSize := 32
@@ -117,6 +116,7 @@ func TestFailParseParamStr(t *testing.T) {
 		"m=,t=,p=",
 		"123,4,55",
 		"m='3,t=1,p=4",
+		"M=34,T=44,P=33",
 	}
 
 	for _, paramStr := range invalidStrings {
