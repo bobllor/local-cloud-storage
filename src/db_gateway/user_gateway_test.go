@@ -12,6 +12,21 @@ import (
 	"github.com/bobllor/gologger"
 )
 
+func TestGetUser(t *testing.T) {
+	udb, err := newTestUserGateway()
+	assert.Nil(t, err)
+
+	user, err := udb.GetUser(testUserAccountID)
+	assert.Nil(t, err)
+
+	assert.Equal(t, user.AccountID, testUserAccountID)
+	assert.Equal(t, user.Active, true)
+	assert.Equal(t, user.Username, "test.username")
+
+	_, err = hasher.ParsePHC(user.PasswordHash)
+	assert.Nil(t, err)
+}
+
 func TestAddUser(t *testing.T) {
 	udb, err := newTestUserGateway()
 	assert.Nil(t, err)
