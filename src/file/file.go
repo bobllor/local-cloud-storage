@@ -13,7 +13,7 @@ const (
 	// It is equal to the public fields of the [File] struct.
 	FileColumnSize    int    = 9
 	FileTableName     string = "File"
-	ColumnFileOwnerID string = "FileOwnerID"
+	ColumnFileOwnerID string = "AccountID" // ColumnFileOwnerID is the column name for the file's owner account ID.
 	ColumnFileName    string = "FileName"
 	ColumnFileType    string = "FileType"
 	ColumnFileID      string = "FileID"
