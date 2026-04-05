@@ -18,7 +18,7 @@ func NewFileGateway(database *sql.DB, config *config.Config) *FileGateway {
 		database:       database,
 		fileFieldCount: file.FileColumnSize,
 		config:         config,
-		logUtil:        LogUtility{log: config.Log},
+		util:           DBUtility{log: config.Log},
 	}
 
 	return f
@@ -28,7 +28,7 @@ type FileGateway struct {
 	database       *sql.DB
 	fileFieldCount int
 	config         *config.Config
-	logUtil        LogUtility
+	util           DBUtility
 }
 
 // GetAllFiles returns a File slice of all File rows belonging to the file owner.
@@ -80,7 +80,7 @@ func (f *FileGateway) GetFiles(fileOwnerID string, conditions []WhereCondition) 
 
 	query := baseQuery + " " + q
 
-	f.logUtil.LogQueryAndArgs(query, args)
+	f.util.LogQueryAndArgs(query, args)
 
 	rows, err := f.database.Query(query, args...)
 	if err != nil {
@@ -150,14 +150,14 @@ func (f *FileGateway) UpdateFiles(fileOwnerID string, cd ClauseData, conditions 
 	execArgs = append(execArgs, cd.Args...)
 	execArgs = append(execArgs, args...)
 
-	f.logUtil.LogQueryAndArgs(query, execArgs)
+	f.util.LogQueryAndArgs(query, execArgs)
 
 	res, err := execQuery(f.database, query, execArgs...)
 	if err != nil {
 		return fmt.Errorf("failed to execute query: %v (args: %v)", err, execArgs)
 	}
 
-	f.logUtil.LogResultRows(res)
+	f.util.LogResultRows(res)
 
 	return nil
 }
@@ -178,14 +178,14 @@ func (f *FileGateway) AddFile(files []file.File) error {
 
 	query = query + " " + paramStr
 
-	f.logUtil.LogQueryAndArgs(query, flatFiles)
+	f.util.LogQueryAndArgs(query, flatFiles)
 
 	res, err := execQuery(f.database, query, flatFiles...)
 	if err != nil {
 		return fmt.Errorf("failed to insert into %s: %v", file.FileTableName, err)
 	}
 
-	f.logUtil.LogResultRows(res)
+	f.util.LogResultRows(res)
 
 	return nil
 }
@@ -208,14 +208,14 @@ func (f *FileGateway) UpdateModifiedFiles(fileOwnerID string, fileIDs []string) 
 	finalArgs := []any{time.Now().Format(time.DateTime)}
 	finalArgs = append(finalArgs, args...)
 
-	f.logUtil.LogQueryAndArgs(query, finalArgs)
+	f.util.LogQueryAndArgs(query, finalArgs)
 
 	res, err := execQuery(f.database, query, finalArgs...)
 	if err != nil {
 		return fmt.Errorf("failed to execute query: %v", err)
 	}
 
-	f.logUtil.LogResultRows(res)
+	f.util.LogResultRows(res)
 
 	return nil
 }
@@ -248,14 +248,14 @@ func (f *FileGateway) DeleteFiles(fileOwnerID string, fileIDs []string) error {
 	finalArgs := []any{time.Now().Format(time.DateTime)}
 	finalArgs = append(finalArgs, args...)
 
-	f.logUtil.LogQueryAndArgs(query, finalArgs)
+	f.util.LogQueryAndArgs(query, finalArgs)
 
 	res, err := execQuery(f.database, query, finalArgs...)
 	if err != nil {
 		return err
 	}
 
-	f.logUtil.LogResultRows(res)
+	f.util.LogResultRows(res)
 
 	return nil
 }
@@ -278,14 +278,14 @@ func (f *FileGateway) RestoreFiles(fileOwnerID string, fileIDs []string) error {
 	baseQuery := fmt.Sprintf("UPDATE %s SET %s = NULL", file.FileTableName, file.ColumnDeletedOn)
 	query := baseQuery + " " + cond
 
-	f.logUtil.LogQueryAndArgs(query, args)
+	f.util.LogQueryAndArgs(query, args)
 
 	res, err := execQuery(f.database, query, args...)
 	if err != nil {
 		return fmt.Errorf("failed to execute query: %v", err)
 	}
 
-	f.logUtil.LogResultRows(res)
+	f.util.LogResultRows(res)
 
 	return nil
 }
@@ -299,9 +299,6 @@ func (f *FileGateway) getFiles(rows *sql.Rows) ([]file.File, error) {
 
 	for rows.Next() {
 		f := file.File{}
-		// datetime is returned as a []uint38, uint38 -> string -> date
-		modifiedTimeSl := make([]uint8, 0)
-		deletedTimeSl := make([]uint8, 0)
 
 		scanErr := rows.Scan(
 			&f.OwnerID,
@@ -311,29 +308,9 @@ func (f *FileGateway) getFiles(rows *sql.Rows) ([]file.File, error) {
 			&f.ParentID,
 			&f.Path,
 			&f.Size,
-			&modifiedTimeSl,
-			&deletedTimeSl,
+			&f.ModifiedOn,
+			&f.DeletedOn,
 		)
-
-		dateFormat := time.DateTime
-		modifiedDate, err := time.Parse(dateFormat, string(modifiedTimeSl))
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse %s column: %v", file.ColumnModifiedOn, err)
-		}
-
-		var deletedDate *time.Time
-		// NULL is an empty slice
-		if len(deletedTimeSl) > 0 {
-			dateTemp, err := time.Parse(dateFormat, string(deletedTimeSl))
-			if err != nil {
-				return nil, fmt.Errorf("failed to parse %s column: %v", file.ColumnDeletedOn, err)
-			}
-
-			deletedDate = &dateTemp
-		}
-
-		f.ModifiedOn = modifiedDate
-		f.DeletedOn = deletedDate
 
 		if scanErr != nil {
 			return nil, scanErr
