@@ -9,11 +9,6 @@ import (
 	"github.com/bobllor/gologger"
 )
 
-// DBUtility is a utility struct for database related operations.
-type DBUtility struct {
-	log *gologger.Logger
-}
-
 // SelectRows iterates over rows to fill a given source slice of any type.
 // src must be a pointer to a slice.
 //
@@ -22,18 +17,15 @@ type DBUtility struct {
 func SelectRows(rows *sql.Rows, src interface{}) error {
 	v := reflect.ValueOf(src)
 
-	if v.Kind() != reflect.Ptr {
-		return errors.New("interface must be of pointer type")
-	}
-	if v.Elem().Type().Kind() != reflect.Slice {
-		return errors.New("interface must be of a pointer to a slice")
+	if v.Kind() != reflect.Ptr || v.Elem().Type().Kind() != reflect.Slice {
+		return errors.New("src interface must be a pointer to a slice")
 	}
 	columns, err := rows.Columns()
 	if err != nil {
 		return err
 	}
 
-	// the type of the slice
+	// the type of the slice, ptr slice any -> slice any -> any
 	t := reflect.TypeOf(src).Elem().Elem()
 	ve := v.Elem()
 
@@ -67,6 +59,11 @@ func SelectRows(rows *sql.Rows, src interface{}) error {
 	}
 
 	return nil
+}
+
+// DBUtility is a utility struct for database related operations.
+type DBUtility struct {
+	log *gologger.Logger
 }
 
 // LogResultRows is used to log the SQL result rows. If an error is encountered during
