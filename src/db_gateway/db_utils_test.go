@@ -8,6 +8,7 @@ import (
 	"github.com/bobllor/assert"
 	"github.com/bobllor/cloud-project/src/file"
 	"github.com/bobllor/cloud-project/src/tests"
+	"github.com/bobllor/cloud-project/src/user"
 )
 
 func TestSelectRows(t *testing.T) {
@@ -134,4 +135,41 @@ func TestMultipleSelectRows(t *testing.T) {
 	assert.Nil(t, err)
 
 	assert.Equal(t, len(data), len(files))
+}
+
+func TestFailSelectRowsNilRows(t *testing.T) {
+	v := []file.File{}
+
+	err := SelectRows(nil, &v)
+	assert.NotNil(t, err)
+}
+
+func TestFailSelectRowsNonPointer(t *testing.T) {
+	v := []user.UserAccount{}
+
+	udb, err := newTestUserGateway()
+	assert.Nil(t, err)
+
+	query := fmt.Sprintf("SELECT * FROM %s", user.UserTableName)
+
+	rows, err := udb.database.Query(query)
+	assert.Nil(t, err)
+
+	err = SelectRows(rows, v)
+	assert.NotNil(t, err)
+}
+
+func TestFailSelectRowsInvalidSize(t *testing.T) {
+	v := []user.UserAccount{}
+
+	udb, err := newTestUserGateway()
+	assert.Nil(t, err)
+
+	query := fmt.Sprintf("SELECT %s FROM %s", user.ColumnAccountID, user.UserTableName)
+
+	rows, err := udb.database.Query(query)
+	assert.Nil(t, err)
+
+	err = SelectRows(rows, &v)
+	assert.NotNil(t, err)
 }
