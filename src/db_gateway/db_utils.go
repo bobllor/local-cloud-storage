@@ -1,0 +1,91 @@
+package dbgateway
+
+import (
+	"database/sql"
+	"errors"
+	"fmt"
+	"reflect"
+
+	"github.com/bobllor/gologger"
+)
+
+// DBUtility is a utility struct for database related operations.
+type DBUtility struct {
+	log *gologger.Logger
+}
+
+// SelectRows iterates over rows to fill a given source slice of any type.
+// src must be a pointer to a slice.
+//
+// The columns length found in rows must be equal to the number of fields given
+// in src, and the order of the columns must match the order of the type in src.
+func SelectRows(rows *sql.Rows, src interface{}) error {
+	v := reflect.ValueOf(src)
+
+	if v.Kind() != reflect.Ptr {
+		return errors.New("interface must be of pointer type")
+	}
+	if v.Elem().Type().Kind() != reflect.Slice {
+		return errors.New("interface must be of a pointer to a slice")
+	}
+	columns, err := rows.Columns()
+	if err != nil {
+		return err
+	}
+
+	// the type of the slice
+	t := reflect.TypeOf(src).Elem().Elem()
+	ve := v.Elem()
+
+	if t.NumField() != len(columns) {
+		return fmt.Errorf(
+			"number of columns in query (%d) does not match interface fields (%d)",
+			len(columns),
+			t.NumField(),
+		)
+	}
+
+	for rows.Next() {
+		values := make([]any, len(columns))
+
+		// setting the slice type to the values for scanning
+		ele := reflect.New(t)
+		for i := range ele.Elem().NumField() {
+			field := ele.Elem().Field(i)
+
+			values[i] = field.Addr().Interface()
+		}
+
+		err := rows.Scan(values...)
+		if err != nil {
+			return err
+		}
+
+		// ve is a dereferenced v, this ensures we append to the same
+		// src value
+		ve.Set(reflect.Append(ve, ele.Elem()))
+	}
+
+	return nil
+}
+
+// LogResultRows is used to log the SQL result rows. If an error is encountered during
+// the result parsing, then it will not log the affected rows.
+// This will log to the Info level with no error, and the Warn level if an error does occur.
+//
+// res is the sql.Result.
+func (d *DBUtility) LogResultRows(res sql.Result) {
+	n, err := res.RowsAffected()
+	if err != nil {
+		d.log.Warnf("failed to check results: %v", err)
+	} else {
+		d.log.Infof("affected rows: %d", n)
+	}
+}
+
+// logQueryAndArgs is used to log a SQL query and its arguments.
+// Both will be logged to the Debug level.
+func (d *DBUtility) LogQueryAndArgs(query string, args []any) {
+	d.log.Debugf("query: %s", query)
+	d.log.Debugf("args: %v", args)
+}
