@@ -7,6 +7,7 @@ import (
 
 	"github.com/bobllor/cloud-project/src/config"
 	"github.com/bobllor/cloud-project/src/hasher"
+	"github.com/bobllor/cloud-project/src/session"
 	"github.com/bobllor/cloud-project/src/user"
 	"github.com/google/uuid"
 )
@@ -103,6 +104,26 @@ func (ug *UserGateway) GetUser(accountID string) (*user.UserAccount, error) {
 
 // NewSession creates a new entry for the Session table, generating
 // a new session ID associated with the account ID to maintain a session.
-func (ug *UserGateway) NewSession(accountID string) {
+func (ug *UserGateway) NewSession(accountID string) error {
+	sessionID := uuid.NewString()
+	query := fmt.Sprintf("REPLACE INTO %s", session.TableName)
 
+	session := session.Session{
+		SessionID: sessionID,
+		AccountID: accountID,
+		CreatedOn: time.Now().UTC(),
+	}
+
+	args := session.ToArgs()
+
+	placeholder := BuildPlaceholder(len(args), 1)
+
+	query = query + " " + "VALUES" + placeholder
+
+	_, err := execQuery(ug.database, query, args...)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
