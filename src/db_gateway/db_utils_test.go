@@ -11,7 +11,7 @@ import (
 	"github.com/bobllor/cloud-project/src/user"
 )
 
-func TestSelectRows(t *testing.T) {
+func TestSelectRow(t *testing.T) {
 	dbConfig := newTestDBConfig()
 
 	db, err := NewDatabase(dbConfig)
@@ -32,17 +32,17 @@ func TestSelectRows(t *testing.T) {
 		FileSize int
 	}
 
-	ffTest := []FileFilterTest{}
+	ffTest := FileFilterTest{}
 
 	rows, err := db.Query(query, testUserAccountID)
 	assert.Nil(t, err)
 
-	err = SelectRows(rows, &ffTest)
+	err = SelectRow(rows, &ffTest)
 	assert.Nil(t, err)
 
-	assert.NotEqual(t, ffTest[0].FileName, "")
-	assert.NotEqual(t, ffTest[0].FileID, "")
-	assert.NotEqual(t, ffTest[0].FileSize, 0)
+	assert.NotEqual(t, ffTest.FileName, "")
+	assert.NotEqual(t, ffTest.FileID, "")
+	assert.NotEqual(t, ffTest.FileSize, 0)
 }
 
 func TestSelectRowsSlice(t *testing.T) {
