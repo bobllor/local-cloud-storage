@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS File(
 
 CREATE TABLE IF NOT EXISTS Session(
     SessionID varchar(255),
-    AccountID varchar(255) NOT NULL,
+    AccountID varchar(255) NOT NULL UNIQUE,
     CreatedOn DATETIME,
     ExpireOn DATETIME,
     PRIMARY KEY (SessionID),
