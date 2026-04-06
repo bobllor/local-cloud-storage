@@ -32,11 +32,11 @@ type Argon2Params struct {
 	KeyLength  uint32
 }
 
-// Hash takes a password, a salt, and params to generate and return a RawHash.
+// Hash takes a string, a salt, and params to generate and return a RawHash.
 //
 // salt can be nil or a predefined salt. If nil is given, then a random salt
 // is generated using Argon2Params.SaltLength given in params.
-func Hash(password string, salt []byte, params Argon2Params) (*RawHash, error) {
+func Hash(str string, salt []byte, params Argon2Params) (*RawHash, error) {
 	if salt == nil {
 		newSalt, err := getSalt(params.SaltLength)
 		if err != nil {
@@ -47,7 +47,7 @@ func Hash(password string, salt []byte, params Argon2Params) (*RawHash, error) {
 	}
 
 	hash := argon2.IDKey(
-		[]byte(password),
+		[]byte(str),
 		salt,
 		params.Time,
 		params.Memory,
@@ -65,7 +65,7 @@ func Hash(password string, salt []byte, params Argon2Params) (*RawHash, error) {
 }
 
 // ParsePHC parses a PHC string and returns a HashResult
-// containing the information that results in the hashed password
+// containing the information that results in the hashed string
 // with Argon2ID.
 func ParsePHC(phc string) (*HashResult, error) {
 	// 6 is the valid length
@@ -116,15 +116,15 @@ func ParsePHC(phc string) (*HashResult, error) {
 	return hashRes, nil
 }
 
-// Compare hashes a given password and compares it to an existing HashResult.
+// Compare hashes a given string and compares it to an existing HashResult.
 // It will return true or false, or an error if one occurs.
-func Compare(password string, hr *HashResult) (bool, error) {
+func Compare(str string, hr *HashResult) (bool, error) {
 	convRaw, err := hr.Decode()
 	if err != nil {
 		return false, err
 	}
 
-	raw, err := Hash(password, convRaw.Salt, convRaw.Params)
+	raw, err := Hash(str, convRaw.Salt, convRaw.Params)
 	if err != nil {
 		return false, err
 	}
