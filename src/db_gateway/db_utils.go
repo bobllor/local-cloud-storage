@@ -15,6 +15,10 @@ import (
 //
 // The columns length found in rows must be equal to the number of fields given
 // in src, and the order of the columns must match the order of the type in src.
+//
+// If there is no entries in rows then it the src interface will be nil values.
+// This must be checked for on the parent caller. Otherwise, use SelectRows for
+// slice length checking.
 func SelectRow(rows *sql.Rows, src interface{}) error {
 	v := reflect.ValueOf(src)
 
