@@ -12,11 +12,17 @@ import (
 	"github.com/bobllor/gologger"
 )
 
-func TestGetUser(t *testing.T) {
+const (
+	testUserName  = "test.username"
+	testPassword  = "anothertestpassword"
+	testPhcString = "$argon2id$v=19$m=65536,t=2,p=4$QTdpUkJ3c3J0amlOT2huV2VBR2duZw$vzICl8p5CVfpGfypDV4yIVULsYatAmir6B8nHWtcPtE"
+)
+
+func TestGetUserID(t *testing.T) {
 	udb, err := newTestUserGateway()
 	assert.Nil(t, err)
 
-	user, err := udb.GetUser(testUserAccountID)
+	user, err := udb.GetUserByID(testUserAccountID)
 	assert.Nil(t, err)
 
 	assert.Equal(t, user.AccountID, testUserAccountID)
@@ -25,6 +31,40 @@ func TestGetUser(t *testing.T) {
 
 	_, err = hasher.ParsePHC(user.PasswordHash)
 	assert.Nil(t, err)
+}
+
+func TestGetUserByUsername(t *testing.T) {
+	udb, err := newTestUserGateway()
+	assert.Nil(t, err)
+
+	user, err := udb.GetUserByUsername(testUserName)
+	assert.Nil(t, err)
+
+	assert.Equal(t, user.Username, testUserName)
+	assert.Equal(t, user.PasswordHash, testPhcString)
+}
+
+func TestCheckCredentials(t *testing.T) {
+	udb, err := newTestUserGateway()
+	assert.Nil(t, err)
+
+	status, err := udb.CheckCredentials(testUserName, testPassword)
+	assert.Nil(t, err)
+
+	assert.True(t, status)
+}
+
+func TestCheckCredentialsInvalid(t *testing.T) {
+	udb, err := newTestUserGateway()
+	assert.Nil(t, err)
+
+	status, err := udb.CheckCredentials("userdoesnotexist", testPassword)
+	assert.NotNil(t, err)
+	assert.False(t, status)
+
+	status, err = udb.CheckCredentials(testUserName, "invalidpassword")
+	assert.Nil(t, err)
+	assert.False(t, status)
 }
 
 func TestAddUser(t *testing.T) {
