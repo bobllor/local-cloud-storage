@@ -178,10 +178,7 @@ func TestRestoreFiles(t *testing.T) {
 	qFiles, err = fDb.GetFiles(testUserAccountID, conditions)
 	assert.Nil(t, err)
 
-	// whoops my assert library fails this. TODO: need to fix!
-	if qFiles[0].DeletedOn != nil {
-		t.Fatal("failed restoring deletion to file on column DeletedOn")
-	}
+	assert.Nil(t, qFiles[0].DeletedOn)
 }
 
 func TestUpdateModifiedFile(t *testing.T) {
