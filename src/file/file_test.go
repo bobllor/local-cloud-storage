@@ -88,5 +88,5 @@ func TestFlattenFile(t *testing.T) {
 
 	flattened := FlattenFile(f)
 
-	assert.Equal(t, FileColumnSize, len(flattened))
+	assert.Equal(t, ColumnSize, len(flattened))
 }
