@@ -3,6 +3,7 @@ package session
 import "time"
 
 const (
+	ColumnSize            = 4
 	TableName             = "Session"
 	ColumnColumnSessionID = "SessionID"
 	ColumnAccountID       = "AccountID"
