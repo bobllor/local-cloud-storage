@@ -127,7 +127,7 @@ func TestMultipleSelectRows(t *testing.T) {
 	rows, err := fdb.database.Query(query, args...)
 	assert.Nil(t, err)
 
-	_, err = devDropRows(fdb.database, file.TableName, file.ColumnFileID, fileIDs...)
+	_, err = DropRows(fdb.database, file.TableName, file.ColumnFileID, fileIDs...)
 	assert.Nil(t, err)
 
 	data := []MultipleFileColumns{}
