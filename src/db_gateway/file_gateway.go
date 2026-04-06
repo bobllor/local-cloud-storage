@@ -16,7 +16,7 @@ const ()
 func NewFileGateway(database *sql.DB, config *config.Config) *FileGateway {
 	f := &FileGateway{
 		database:       database,
-		fileFieldCount: file.FileColumnSize,
+		fileFieldCount: file.ColumnSize,
 		config:         config,
 		util:           DBUtility{log: config.Log},
 	}
@@ -37,7 +37,7 @@ type FileGateway struct {
 // the scanning process if it is occurring.
 func (f *FileGateway) GetAllFiles(fileOwnerID string) ([]file.File, error) {
 	cb := NewClauseBuilder()
-	baseQuery := fmt.Sprintf("SELECT * FROM %s", file.FileTableName)
+	baseQuery := fmt.Sprintf("SELECT * FROM %s", file.TableName)
 	cb.Equal(file.ColumnFileOwnerID, fileOwnerID)
 
 	con, args, err := cb.Build()
@@ -49,7 +49,7 @@ func (f *FileGateway) GetAllFiles(fileOwnerID string) ([]file.File, error) {
 
 	rows, err := f.database.Query(query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query %s: %v", file.FileTableName, err)
+		return nil, fmt.Errorf("failed to query %s: %v", file.TableName, err)
 	}
 
 	files, err := f.getFiles(rows)
@@ -64,7 +64,7 @@ func (f *FileGateway) GetAllFiles(fileOwnerID string) ([]file.File, error) {
 func (f *FileGateway) GetFiles(fileOwnerID string, conditions []WhereCondition) ([]file.File, error) {
 	cb := NewClauseBuilder()
 
-	baseQuery := fmt.Sprintf("SELECT * FROM %s", file.FileTableName)
+	baseQuery := fmt.Sprintf("SELECT * FROM %s", file.TableName)
 
 	cb.Equal(file.ColumnFileOwnerID, fileOwnerID)
 
@@ -129,7 +129,7 @@ func (f *FileGateway) UpdateFiles(fileOwnerID string, cd ClauseData, conditions 
 		return fmt.Errorf("failed to validate ClauseData: %v", err)
 	}
 
-	baseQuery := fmt.Sprintf("UPDATE %s", file.FileTableName) + " " + setQ
+	baseQuery := fmt.Sprintf("UPDATE %s", file.TableName) + " " + setQ
 
 	cb.Equal(file.ColumnFileOwnerID, fileOwnerID)
 
@@ -173,7 +173,7 @@ func (f *FileGateway) AddFile(files []file.File) error {
 
 	flatFiles := file.FlattenFile(files...)
 
-	query := fmt.Sprintf("INSERT INTO %s VALUES", file.FileTableName)
+	query := fmt.Sprintf("INSERT INTO %s VALUES", file.TableName)
 	paramStr := BuildPlaceholder(f.fileFieldCount, len(files))
 
 	query = query + " " + paramStr
@@ -182,7 +182,7 @@ func (f *FileGateway) AddFile(files []file.File) error {
 
 	res, err := execQuery(f.database, query, flatFiles...)
 	if err != nil {
-		return fmt.Errorf("failed to insert into %s: %v", file.FileTableName, err)
+		return fmt.Errorf("failed to insert into %s: %v", file.TableName, err)
 	}
 
 	f.util.LogResultRows(res)
@@ -203,7 +203,7 @@ func (f *FileGateway) UpdateModifiedFiles(fileOwnerID string, fileIDs []string) 
 		return fmt.Errorf("failed to build query: %v", err)
 	}
 
-	query := fmt.Sprintf("UPDATE %s SET %s = ?", file.FileTableName, file.ColumnModifiedOn) + " " + qCon
+	query := fmt.Sprintf("UPDATE %s SET %s = ?", file.TableName, file.ColumnModifiedOn) + " " + qCon
 
 	finalArgs := []any{time.Now().Format(time.DateTime)}
 	finalArgs = append(finalArgs, args...)
@@ -240,7 +240,7 @@ func (f *FileGateway) DeleteFiles(fileOwnerID string, fileIDs []string) error {
 
 	baseQuery := fmt.Sprintf(
 		"UPDATE %s SET %s = ?",
-		file.FileTableName,
+		file.TableName,
 		file.ColumnDeletedOn,
 	)
 	query := baseQuery + " " + qCondition
@@ -275,7 +275,7 @@ func (f *FileGateway) RestoreFiles(fileOwnerID string, fileIDs []string) error {
 		return fmt.Errorf("failed to build conditions: %v", err)
 	}
 
-	baseQuery := fmt.Sprintf("UPDATE %s SET %s = NULL", file.FileTableName, file.ColumnDeletedOn)
+	baseQuery := fmt.Sprintf("UPDATE %s SET %s = NULL", file.TableName, file.ColumnDeletedOn)
 	query := baseQuery + " " + cond
 
 	f.util.LogQueryAndArgs(query, args)
