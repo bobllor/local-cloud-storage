@@ -61,12 +61,13 @@ func (sg *SessionGateway) GetSession(accountID string) (*session.Session, error)
 	return accSession, nil
 }
 
-// AddSession adds a new entry for the Session table, generating
-// a new session ID associated with the account ID to maintain a session.
+// UpsertSession adds a new or updates an existing entry for the Session table, ]
+// generating a new session ID associated with the account ID to maintain a session.
+// It will return the Session that was added if successful.
 //
-// Existing account IDs will have get updated with a new session ID
-// dates.
-func (sg *SessionGateway) AddSession(accountID string) error {
+// Existing account IDs will have get updated with new session ID
+// dates, and if it is expired then a new session ID is generated.
+func (sg *SessionGateway) UpsertSession(accountID string) (*session.Session, error) {
 	sessionID := uuid.NewString()
 	query := fmt.Sprintf("INSERT INTO %s", session.TableName)
 
@@ -99,8 +100,8 @@ func (sg *SessionGateway) AddSession(accountID string) error {
 
 	_, err := execQuery(sg.database, query, args...)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return &ses, nil
 }
