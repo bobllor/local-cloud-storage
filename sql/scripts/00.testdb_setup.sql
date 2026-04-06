@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS Session(
         ON DELETE CASCADE
 );
 
-/* default row of the test database */
+/* default entries for the test database */
 INSERT INTO UserAccount
     VALUES
     (
@@ -61,4 +61,12 @@ INSERT INTO File
         1234,
         NOW(),
         NULL
+    );
+INSERT INTO Session
+    VALUES
+    (
+        "7ca90f85-b1e0-4214-8ff6-4e3720cc8078",
+        "89672a64-f3ff-490c-8f2d-7e5cf5d4aa70", 
+        NOW(), 
+        DATE_ADD(NOW(), INTERVAL 30 DAY)
     );
