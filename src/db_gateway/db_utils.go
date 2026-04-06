@@ -9,6 +9,47 @@ import (
 	"github.com/bobllor/gologger"
 )
 
+// SelectRow iterates over rows to fill a given source of any type.
+// This only selects a single row from the database.
+// src must be a pointer to a non-slice type.
+//
+// The columns length found in rows must be equal to the number of fields given
+// in src, and the order of the columns must match the order of the type in src.
+func SelectRow(rows *sql.Rows, src interface{}) error {
+	v := reflect.ValueOf(src)
+
+	if rows == nil {
+		return errors.New("rows cannot be nil")
+	}
+	if v.Kind() != reflect.Ptr || v.Elem().Type().Kind() == reflect.Slice {
+		return errors.New("src interface must be a pointer to a non-slice")
+	}
+	columns, err := rows.Columns()
+	if err != nil {
+		return err
+	}
+
+	if v.Elem().NumField() != len(columns) {
+		return fmt.Errorf(
+			"number of columns in query (%d) does not match interface fields (%d)",
+			len(columns),
+			v.Elem().NumField(),
+		)
+	}
+
+	for rows.Next() {
+		// setting the slice type to the values for scanning
+		values := getScannableValues(len(columns), v)
+
+		err := rows.Scan(values...)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // SelectRows iterates over rows to fill a given source slice of any type.
 // src must be a pointer to a slice.
 //
