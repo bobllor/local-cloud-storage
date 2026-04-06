@@ -41,15 +41,9 @@ func SelectRows(rows *sql.Rows, src interface{}) error {
 	}
 
 	for rows.Next() {
-		values := make([]any, len(columns))
-
 		// setting the slice type to the values for scanning
 		ele := reflect.New(t)
-		for i := range ele.Elem().NumField() {
-			field := ele.Elem().Field(i)
-
-			values[i] = field.Addr().Interface()
-		}
+		values := getScannableValues(len(columns), ele)
 
 		err := rows.Scan(values...)
 		if err != nil {
@@ -62,6 +56,25 @@ func SelectRows(rows *sql.Rows, src interface{}) error {
 	}
 
 	return nil
+}
+
+// getScannableValues creates a new []any that contains the addresses
+// of the given reflect.Value fields.
+//
+// The value is expected to be a pointer type. It will panic if
+// it is not a pointer to a non-slice.
+func getScannableValues(size int, v reflect.Value) []any {
+	values := make([]any, size)
+
+	fieldCount := v.Elem().NumField()
+
+	for i := range fieldCount {
+		field := v.Elem().Field(i)
+
+		values[i] = field.Addr().Interface()
+	}
+
+	return values
 }
 
 // DBUtility is a utility struct for database related operations.
