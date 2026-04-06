@@ -89,7 +89,7 @@ func TestAddFile(t *testing.T) {
 	assert.NotEqual(t, len(qFiles), 1)
 	assert.NotEqual(t, len(qFiles), 0)
 
-	_, err = devDropRows(fDb.database, file.TableName, file.ColumnFileID, utils.ConvertToAny(fileIDs)...)
+	_, err = DropRows(fDb.database, file.TableName, file.ColumnFileID, utils.ConvertToAny(fileIDs)...)
 	assert.Nil(t, err)
 }
 
