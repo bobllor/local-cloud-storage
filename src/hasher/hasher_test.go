@@ -46,11 +46,11 @@ func TestParsePHC(t *testing.T) {
 	hashRes, err := ParsePHC(baseHashInfo.PHC)
 	assert.Nil(t, err)
 
-	assert.Equal(t, strings.Contains(baseHashInfo.PHC, hashRes.Hash), true)
-	assert.Equal(t, strings.Contains(baseHashInfo.PHC, hashRes.Salt), true)
-	assert.Equal(t, strings.Contains(baseHashInfo.PHC, fmt.Sprintf("m=%d", hashRes.Params.Memory)), true)
-	assert.Equal(t, strings.Contains(baseHashInfo.PHC, fmt.Sprintf("t=%d", hashRes.Params.Time)), true)
-	assert.Equal(t, strings.Contains(baseHashInfo.PHC, fmt.Sprintf("p=%d", hashRes.Params.Threads)), true)
+	assert.True(t, strings.Contains(baseHashInfo.PHC, hashRes.Hash))
+	assert.True(t, strings.Contains(baseHashInfo.PHC, hashRes.Salt))
+	assert.True(t, strings.Contains(baseHashInfo.PHC, fmt.Sprintf("m=%d", hashRes.Params.Memory)))
+	assert.True(t, strings.Contains(baseHashInfo.PHC, fmt.Sprintf("t=%d", hashRes.Params.Time)))
+	assert.True(t, strings.Contains(baseHashInfo.PHC, fmt.Sprintf("p=%d", hashRes.Params.Threads)))
 }
 
 func TestTrueCompare(t *testing.T) {
@@ -60,7 +60,7 @@ func TestTrueCompare(t *testing.T) {
 	status, err := Compare(baseHashInfo.Password, res)
 	assert.Nil(t, err)
 
-	assert.Equal(t, status, true)
+	assert.True(t, status)
 }
 
 func TestFalseCompare(t *testing.T) {
@@ -72,7 +72,7 @@ func TestFalseCompare(t *testing.T) {
 	status, err := Compare(password, baseRes)
 	assert.Nil(t, err)
 
-	assert.Equal(t, status, false)
+	assert.False(t, status)
 }
 
 func TestConvertRawToResToRaw(t *testing.T) {

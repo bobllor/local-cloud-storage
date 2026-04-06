@@ -163,7 +163,7 @@ func TestSingleSetPlaceholder(t *testing.T) {
 	querySplit := strings.Split(query, ",")
 
 	assert.Equal(t, len(querySplit), len(columns))
-	assert.Equal(t, strings.Contains(query, columns[0]), true)
+	assert.True(t, strings.Contains(query, columns[0]))
 
 	counter := 0
 
@@ -186,7 +186,7 @@ func TestMultiSetPlaceholder(t *testing.T) {
 	assert.Equal(t, len(querySplit), len(columns))
 
 	for _, col := range columns {
-		assert.Equal(t, strings.Contains(query, col), true)
+		assert.True(t, strings.Contains(query, col))
 	}
 
 	counter := 0

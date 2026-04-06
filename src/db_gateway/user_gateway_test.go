@@ -20,7 +20,7 @@ func TestGetUser(t *testing.T) {
 	assert.Nil(t, err)
 
 	assert.Equal(t, user.AccountID, testUserAccountID)
-	assert.Equal(t, user.Active, true)
+	assert.True(t, user.Active)
 	assert.Equal(t, user.Username, "test.username")
 
 	_, err = hasher.ParsePHC(user.PasswordHash)
