@@ -116,7 +116,9 @@ func ParsePHC(phc string) (*HashResult, error) {
 	return hashRes, nil
 }
 
-// Compare hashes a given string and compares it to an existing HashResult.
+// Compare hashes a given string and compares it to an existing HashResult,
+// parsing the information from the result to compare to the string.
+//
 // It will return true or false, or an error if one occurs.
 func Compare(str string, hr *HashResult) (bool, error) {
 	convRaw, err := hr.Decode()
