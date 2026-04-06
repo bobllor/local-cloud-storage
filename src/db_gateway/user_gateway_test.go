@@ -36,7 +36,7 @@ func TestAddUser(t *testing.T) {
 	acc, err := udb.AddUser(username, password)
 	assert.Nil(t, err)
 
-	_, err = devDropRows(udb.database, user.UserTableName, user.ColumnAccountID, acc.AccountID)
+	_, err = devDropRows(udb.database, user.TableName, user.ColumnAccountID, acc.AccountID)
 	assert.Nil(t, err)
 }
 
@@ -50,7 +50,7 @@ func TestAddUserComparePassword(t *testing.T) {
 	assert.Nil(t, err)
 
 	// drop row immediately in case of failures below, the rest doesnt need the table data
-	_, err = devDropRows(udb.database, user.UserTableName, user.ColumnAccountID, acc.AccountID)
+	_, err = devDropRows(udb.database, user.TableName, user.ColumnAccountID, acc.AccountID)
 	assert.Nil(t, err)
 
 	baseRes, err := hasher.ParsePHC(acc.PasswordHash)
