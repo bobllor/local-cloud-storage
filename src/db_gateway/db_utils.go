@@ -99,6 +99,62 @@ func SelectRows(rows *sql.Rows, src interface{}) error {
 	return nil
 }
 
+// UpdateRow updates a single row from a table based on its column value.
+func UpdateRow(db *sql.DB, table string, whereColumn string, whereArg any, clause ClauseData) (sql.Result, error) {
+	cb := NewClauseBuilder()
+	cb.In(whereColumn, whereArg)
+
+	clQ, err := clause.BuildSetQuery()
+	if err != nil {
+		return nil, err
+	}
+
+	baseQ := fmt.Sprintf("UPDATE %s %s", table, clQ)
+
+	cbQ, args, err := cb.Build()
+	if err != nil {
+		return nil, err
+	}
+
+	finalArgs := []any{}
+
+	finalArgs = append(finalArgs, clause.Args...)
+	finalArgs = append(finalArgs, args...)
+
+	query := baseQ + " " + cbQ
+
+	res, err := execQuery(db, query, finalArgs...)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+// DropRows is used to drop rows from a table. This is a destructive action and will
+// permanently delete the row. This should only be used for very specific cases or testing.
+//
+// column is used to target the column where the row is in the given slice of args.
+func DropRows(db *sql.DB, table string, column string, args ...any) (sql.Result, error) {
+	cb := NewClauseBuilder()
+
+	cb.In(column, args...)
+
+	cbQ, newArgs, err := cb.Build()
+	if err != nil {
+		return nil, err
+	}
+
+	query := fmt.Sprintf("DELETE FROM %s", table) + " " + cbQ
+
+	res, err := execQuery(db, query, newArgs...)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
 // getScannableValues creates a new []any that contains the addresses
 // of the given reflect.Value fields.
 //
