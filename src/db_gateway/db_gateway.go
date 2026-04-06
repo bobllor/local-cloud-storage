@@ -129,27 +129,3 @@ func execQuery(db *sql.DB, query string, args ...any) (sql.Result, error) {
 
 	return res, err
 }
-
-// devDropRows is used to drop rows from a table. This is only for developmental
-// purposes and is not intended to be used on production.
-//
-// column is used to target the column where the row is in the given slice of args.
-func devDropRows(db *sql.DB, table string, column string, args ...any) (sql.Result, error) {
-	cb := NewClauseBuilder()
-
-	cb.In(column, args...)
-
-	cbQ, newArgs, err := cb.Build()
-	if err != nil {
-		return nil, err
-	}
-
-	query := fmt.Sprintf("DELETE FROM %s", table) + " " + cbQ
-
-	res, err := execQuery(db, query, newArgs...)
-	if err != nil {
-		return nil, err
-	}
-
-	return res, nil
-}
