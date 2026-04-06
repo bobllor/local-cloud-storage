@@ -22,7 +22,7 @@ func TestSelectRow(t *testing.T) {
 		file.ColumnFileName,
 		file.ColumnFileID,
 		file.ColumnFileSize,
-		file.FileTableName,
+		file.TableName,
 		file.ColumnFileOwnerID,
 	)
 
@@ -58,7 +58,7 @@ func TestSelectRowsSlice(t *testing.T) {
 		file.ColumnFileSize,
 		file.ColumnModifiedOn,
 		file.ColumnDeletedOn,
-		file.FileTableName,
+		file.TableName,
 		file.ColumnFileOwnerID,
 	)
 
@@ -113,7 +113,7 @@ func TestMultipleSelectRows(t *testing.T) {
 		"SELECT %s,%s FROM %s",
 		file.ColumnFileName,
 		file.ColumnFileID,
-		file.FileTableName,
+		file.TableName,
 	)
 
 	cb := NewClauseBuilder()
@@ -127,7 +127,7 @@ func TestMultipleSelectRows(t *testing.T) {
 	rows, err := fdb.database.Query(query, args...)
 	assert.Nil(t, err)
 
-	_, err = devDropRows(fdb.database, file.FileTableName, file.ColumnFileID, fileIDs...)
+	_, err = devDropRows(fdb.database, file.TableName, file.ColumnFileID, fileIDs...)
 	assert.Nil(t, err)
 
 	data := []MultipleFileColumns{}
@@ -150,7 +150,7 @@ func TestFailSelectRowsNonPointer(t *testing.T) {
 	udb, err := newTestUserGateway()
 	assert.Nil(t, err)
 
-	query := fmt.Sprintf("SELECT * FROM %s", user.UserTableName)
+	query := fmt.Sprintf("SELECT * FROM %s", user.TableName)
 
 	rows, err := udb.database.Query(query)
 	assert.Nil(t, err)
@@ -165,7 +165,7 @@ func TestFailSelectRowsInvalidSize(t *testing.T) {
 	udb, err := newTestUserGateway()
 	assert.Nil(t, err)
 
-	query := fmt.Sprintf("SELECT %s FROM %s", user.ColumnAccountID, user.UserTableName)
+	query := fmt.Sprintf("SELECT %s FROM %s", user.ColumnAccountID, user.TableName)
 
 	rows, err := udb.database.Query(query)
 	assert.Nil(t, err)

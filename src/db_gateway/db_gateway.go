@@ -124,7 +124,7 @@ func execQuery(db *sql.DB, query string, args ...any) (sql.Result, error) {
 	err = tx.Commit()
 	if err != nil {
 		tx.Rollback()
-		return nil, fmt.Errorf("failed to commit transaction for %s: %v", file.FileTableName, err)
+		return nil, fmt.Errorf("failed to commit transaction for %s: %v", file.TableName, err)
 	}
 
 	return res, err
