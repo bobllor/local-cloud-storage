@@ -11,9 +11,9 @@ import (
 const (
 	// FileColumnSize is the amount of columns used for the Files table.
 	// It is equal to the public fields of the [File] struct.
-	FileColumnSize    int    = 9
-	FileTableName     string = "File"
-	ColumnFileOwnerID string = "FileOwnerID"
+	ColumnSize        int    = 9
+	TableName         string = "File"
+	ColumnFileOwnerID string = "AccountID" // ColumnFileOwnerID is the column name for the file's owner account ID.
 	ColumnFileName    string = "FileName"
 	ColumnFileType    string = "FileType"
 	ColumnFileID      string = "FileID"

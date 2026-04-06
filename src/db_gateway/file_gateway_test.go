@@ -1,7 +1,6 @@
 package dbgateway
 
 import (
-	"fmt"
 	"io"
 	"log"
 	"testing"
@@ -88,9 +87,9 @@ func TestAddFile(t *testing.T) {
 
 	// only 1 row exists by default, afterwards it adds however many from files
 	assert.NotEqual(t, len(qFiles), 1)
+	assert.NotEqual(t, len(qFiles), 0)
 
-	fmt.Println(fileIDs)
-	_, err = devDropRows(fDb.database, file.FileTableName, file.ColumnFileID, utils.ConvertToAny(fileIDs)...)
+	_, err = DropRows(fDb.database, file.TableName, file.ColumnFileID, utils.ConvertToAny(fileIDs)...)
 	assert.Nil(t, err)
 }
 
@@ -179,10 +178,7 @@ func TestRestoreFiles(t *testing.T) {
 	qFiles, err = fDb.GetFiles(testUserAccountID, conditions)
 	assert.Nil(t, err)
 
-	// whoops my assert library fails this. TODO: need to fix!
-	if qFiles[0].DeletedOn != nil {
-		t.Fatal("failed restoring deletion to file on column DeletedOn")
-	}
+	assert.Nil(t, qFiles[0].DeletedOn)
 }
 
 func TestUpdateModifiedFile(t *testing.T) {

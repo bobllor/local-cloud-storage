@@ -62,7 +62,7 @@ func TestReadParentIdFolders(t *testing.T) {
 			// if this fails, then the parent doesn't exist
 			// in the flat file map
 			idParentFile, ok := fileIdMap[*file.ParentID]
-			assert.Equal(t, ok, true)
+			assert.True(t, ok)
 
 			// checks if the flat parent file is a directory
 			assert.Equal(t, idParentFile.Type, "directory")
@@ -88,5 +88,5 @@ func TestFlattenFile(t *testing.T) {
 
 	flattened := FlattenFile(f)
 
-	assert.Equal(t, FileColumnSize, len(flattened))
+	assert.Equal(t, ColumnSize, len(flattened))
 }

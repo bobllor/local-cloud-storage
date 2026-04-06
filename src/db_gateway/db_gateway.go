@@ -40,7 +40,9 @@ func NewConfig(user string, passwd string, net string, addr string, dbName strin
 	c.Net = net
 	c.Addr = addr
 	c.DBName = dbName
+
 	c.AllowNativePasswords = true
+	c.ParseTime = true
 
 	return c
 }
@@ -122,30 +124,8 @@ func execQuery(db *sql.DB, query string, args ...any) (sql.Result, error) {
 	err = tx.Commit()
 	if err != nil {
 		tx.Rollback()
-		return nil, fmt.Errorf("failed to commit transaction for %s: %v", file.FileTableName, err)
+		return nil, fmt.Errorf("failed to commit transaction for %s: %v", file.TableName, err)
 	}
 
 	return res, err
-}
-
-// devDropRows is used to drop rows from a table. This is only for developmental
-// purposes and is not intended to be used on production.
-func devDropRows(db *sql.DB, table string, column string, args ...any) (sql.Result, error) {
-	cb := NewClauseBuilder()
-
-	cb.In(column, args...)
-
-	cbQ, newArgs, err := cb.Build()
-	if err != nil {
-		return nil, err
-	}
-
-	query := fmt.Sprintf("DELETE FROM %s", table) + " " + cbQ
-
-	res, err := execQuery(db, query, newArgs...)
-	if err != nil {
-		return nil, err
-	}
-
-	return res, nil
 }

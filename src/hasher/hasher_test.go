@@ -15,10 +15,9 @@ var baseHashInfo = struct {
 }{
 	Password: "anothertestpassword",
 	Salt:     []byte("A7iRBwsrtjiNOhnWeAGgng"),
-	PHC:      "$argon2id$v=19$m=65536,t=2,p=4$QTdpUkJ3c3J0amlOT2huV2VBR2duZw$vzICl8p5CVfpGfypDV4yIVULsYatAmir6B8nHWtcPtE",
+	// generated from a random site online (argon2 online) for comparison
+	PHC: "$argon2id$v=19$m=65536,t=2,p=4$QTdpUkJ3c3J0amlOT2huV2VBR2duZw$vzICl8p5CVfpGfypDV4yIVULsYatAmir6B8nHWtcPtE",
 }
-
-// generated from a random site online (argon2 online) for comparison
 
 func TestSalt(t *testing.T) {
 	saltSize := 32
@@ -47,11 +46,11 @@ func TestParsePHC(t *testing.T) {
 	hashRes, err := ParsePHC(baseHashInfo.PHC)
 	assert.Nil(t, err)
 
-	assert.Equal(t, strings.Contains(baseHashInfo.PHC, hashRes.Hash), true)
-	assert.Equal(t, strings.Contains(baseHashInfo.PHC, hashRes.Salt), true)
-	assert.Equal(t, strings.Contains(baseHashInfo.PHC, fmt.Sprintf("m=%d", hashRes.Params.Memory)), true)
-	assert.Equal(t, strings.Contains(baseHashInfo.PHC, fmt.Sprintf("t=%d", hashRes.Params.Time)), true)
-	assert.Equal(t, strings.Contains(baseHashInfo.PHC, fmt.Sprintf("p=%d", hashRes.Params.Threads)), true)
+	assert.True(t, strings.Contains(baseHashInfo.PHC, hashRes.Hash))
+	assert.True(t, strings.Contains(baseHashInfo.PHC, hashRes.Salt))
+	assert.True(t, strings.Contains(baseHashInfo.PHC, fmt.Sprintf("m=%d", hashRes.Params.Memory)))
+	assert.True(t, strings.Contains(baseHashInfo.PHC, fmt.Sprintf("t=%d", hashRes.Params.Time)))
+	assert.True(t, strings.Contains(baseHashInfo.PHC, fmt.Sprintf("p=%d", hashRes.Params.Threads)))
 }
 
 func TestTrueCompare(t *testing.T) {
@@ -61,7 +60,7 @@ func TestTrueCompare(t *testing.T) {
 	status, err := Compare(baseHashInfo.Password, res)
 	assert.Nil(t, err)
 
-	assert.Equal(t, status, true)
+	assert.True(t, status)
 }
 
 func TestFalseCompare(t *testing.T) {
@@ -73,7 +72,7 @@ func TestFalseCompare(t *testing.T) {
 	status, err := Compare(password, baseRes)
 	assert.Nil(t, err)
 
-	assert.Equal(t, status, false)
+	assert.False(t, status)
 }
 
 func TestConvertRawToResToRaw(t *testing.T) {
@@ -117,6 +116,7 @@ func TestFailParseParamStr(t *testing.T) {
 		"m=,t=,p=",
 		"123,4,55",
 		"m='3,t=1,p=4",
+		"M=34,T=44,P=33",
 	}
 
 	for _, paramStr := range invalidStrings {

@@ -5,8 +5,8 @@ import (
 )
 
 const (
-	UserColumnSize     = 5
-	UserTableName      = "UserAccount"
+	ColumnSize         = 5
+	TableName          = "UserAccount"
 	ColumnAccountID    = "AccountID"
 	ColumnUsername     = "Username"
 	ColumnPasswordHash = "PasswordHash"
