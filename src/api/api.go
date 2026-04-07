@@ -4,14 +4,14 @@ import (
 	dbcon "github.com/bobllor/cloud-project/src/db_gateway"
 )
 
-// DBAPI is used for handling API requests.
-type DBAPI struct {
-	FileGateway dbcon.FileGateway
+type Api struct {
+	User *UserHandler
 }
 
-func NewDBAPI(fileGateWay dbcon.FileGateway) *DBAPI {
-	api := &DBAPI{
-		FileGateway: fileGateWay,
+// NewApi creates a new Api struct.
+func NewApi(gw *dbcon.Gateway) *Api {
+	api := &Api{
+		User: NewUserHandler(gw),
 	}
 
 	return api
