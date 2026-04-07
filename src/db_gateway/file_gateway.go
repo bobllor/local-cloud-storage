@@ -10,8 +10,6 @@ import (
 	"github.com/bobllor/cloud-project/src/utils"
 )
 
-const ()
-
 // NewFileGateway creates a new FileGateway for database related options.
 func NewFileGateway(database *sql.DB, config *config.Config) *FileGateway {
 	f := &FileGateway{
