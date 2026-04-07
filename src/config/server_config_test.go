@@ -45,18 +45,16 @@ func newTestServerConfig() *ServerConfig {
 		Address:     "127.0.0.1:3306",
 		NetProtocol: "tcp",
 		FileUser: DatabaseUser{
-			User:     "Username",
-			Password: "$FILEUSER_DB_PASSWORD",
+			User: "Username",
 		},
-		UserAccountUser: DatabaseUser{
-			User:     "UserUsername",
-			Password: "$ACCOUNTUSER_DB_PASSWORD",
+		AccountUser: DatabaseUser{
+			User: "UserUsername",
 		},
 	}
 
 	s := &ServerConfig{
-		Database:         dbi,
-		EnvironmentFiles: []string{"test.env"},
+		Database: dbi,
+		EnvFiles: []string{"test.env"},
 	}
 
 	return s
