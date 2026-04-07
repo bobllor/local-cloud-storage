@@ -10,7 +10,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func NewSessionGateway(db *sql.DB, cfg *config.Config) (*SessionGateway, error) {
+func NewSessionGateway(db *sql.DB, cfg *config.Config) *SessionGateway {
 	sg := &SessionGateway{
 		database:          db,
 		sessionFieldCount: session.ColumnSize,
@@ -18,7 +18,7 @@ func NewSessionGateway(db *sql.DB, cfg *config.Config) (*SessionGateway, error) 
 		util:              DBUtility{log: cfg.Log},
 	}
 
-	return sg, nil
+	return sg
 }
 
 type SessionGateway struct {

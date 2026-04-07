@@ -98,10 +98,7 @@ func newTestSessionGateway() (*SessionGateway, error) {
 
 	cfg := config.NewConfig(logger)
 
-	sg, err := NewSessionGateway(db, cfg)
-	if err != nil {
-		return nil, err
-	}
+	sg := NewSessionGateway(db, cfg)
 
 	return sg, nil
 }
