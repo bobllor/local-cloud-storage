@@ -12,6 +12,12 @@ const (
 	dbDriver = "mysql"
 )
 
+type Gateway struct {
+	File    *FileGateway
+	User    *UserGateway
+	Session *SessionGateway
+}
+
 // NewDatabase opens the SQL database and returns a sql.DB.
 // It will return an error if any errors occur.
 //
