@@ -1,45 +1,39 @@
 package server
 
 import (
-	"fmt"
-	"io"
-	"net"
 	"net/http"
 )
 
 type Server struct {
-	Listener net.Listener
-	Mux      *http.ServeMux
+	httpServer *http.Server
+	mux        *http.ServeMux
 }
 
+// NewServer creates a new Server for registering endpoints and
+// starting the server.
 func NewServer(addr string) (*Server, error) {
 	mux := http.NewServeMux()
-
-	l, err := net.Listen("tcp", addr)
-	if err != nil {
-		return nil, err
+	serv := &http.Server{
+		Addr:    addr,
+		Handler: mux,
 	}
 
 	s := &Server{
-		Listener: l,
-		Mux:      mux,
+		httpServer: serv,
+		mux:        mux,
 	}
 
 	return s, nil
 }
 
-func (s *Server) CreateServer() *http.Server {
-	s.Mux.HandleFunc("/", defaultRoot)
-
-	ser := &http.Server{
-		Addr:    s.Listener.Addr().String(),
-		Handler: s.Mux,
-	}
-
-	return ser
+// Start starts the server and listens on the address. It will return an
+// error if any errors occur during the start up.
+func (s *Server) Start() error {
+	return s.httpServer.ListenAndServe()
 }
 
-func defaultRoot(w http.ResponseWriter, _ *http.Request) {
-	fmt.Println(io.WriteString(w, "Hello!\n"))
-	fmt.Println("Accessed")
+// RegisterHandler registers a new handler for the Server.
+// This will panic if an existing pattern is given to register.
+func (s *Server) RegisterHandler(pattern string, handler func(http.ResponseWriter, *http.Request)) {
+	s.mux.HandleFunc(pattern, handler)
 }
