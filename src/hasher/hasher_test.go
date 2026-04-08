@@ -6,18 +6,8 @@ import (
 	"testing"
 
 	"github.com/bobllor/assert"
+	"github.com/bobllor/cloud-project/src/tests"
 )
-
-var baseHashInfo = struct {
-	Password string
-	Salt     []byte
-	PHC      string
-}{
-	Password: "anothertestpassword",
-	Salt:     []byte("A7iRBwsrtjiNOhnWeAGgng"),
-	// generated from a random site online (argon2 online) for comparison
-	PHC: "$argon2id$v=19$m=65536,t=2,p=4$QTdpUkJ3c3J0amlOT2huV2VBR2duZw$vzICl8p5CVfpGfypDV4yIVULsYatAmir6B8nHWtcPtE",
-}
 
 func TestSalt(t *testing.T) {
 	saltSize := 32
@@ -34,30 +24,30 @@ func TestHashPassword(t *testing.T) {
 }
 
 func TestHashToString(t *testing.T) {
-	raw, err := Hash(baseHashInfo.Password, baseHashInfo.Salt, DefaultArgon2Params)
+	raw, err := Hash(tests.TestPassword, tests.TestSalt, DefaultArgon2Params)
 	assert.Nil(t, err)
 
 	res := raw.Encode()
 
-	assert.Equal(t, res.PHC, baseHashInfo.PHC)
+	assert.Equal(t, res.PHC, tests.DbRowInfo.PhcString)
 }
 
 func TestParsePHC(t *testing.T) {
-	hashRes, err := ParsePHC(baseHashInfo.PHC)
+	hashRes, err := ParsePHC(tests.DbRowInfo.PhcString)
 	assert.Nil(t, err)
 
-	assert.True(t, strings.Contains(baseHashInfo.PHC, hashRes.Hash))
-	assert.True(t, strings.Contains(baseHashInfo.PHC, hashRes.Salt))
-	assert.True(t, strings.Contains(baseHashInfo.PHC, fmt.Sprintf("m=%d", hashRes.Params.Memory)))
-	assert.True(t, strings.Contains(baseHashInfo.PHC, fmt.Sprintf("t=%d", hashRes.Params.Time)))
-	assert.True(t, strings.Contains(baseHashInfo.PHC, fmt.Sprintf("p=%d", hashRes.Params.Threads)))
+	assert.True(t, strings.Contains(tests.DbRowInfo.PhcString, hashRes.Hash))
+	assert.True(t, strings.Contains(tests.DbRowInfo.PhcString, hashRes.Salt))
+	assert.True(t, strings.Contains(tests.DbRowInfo.PhcString, fmt.Sprintf("m=%d", hashRes.Params.Memory)))
+	assert.True(t, strings.Contains(tests.DbRowInfo.PhcString, fmt.Sprintf("t=%d", hashRes.Params.Time)))
+	assert.True(t, strings.Contains(tests.DbRowInfo.PhcString, fmt.Sprintf("p=%d", hashRes.Params.Threads)))
 }
 
 func TestTrueCompare(t *testing.T) {
-	res, err := ParsePHC(baseHashInfo.PHC)
+	res, err := ParsePHC(tests.DbRowInfo.PhcString)
 	assert.Nil(t, err)
 
-	status, err := Compare(baseHashInfo.Password, res)
+	status, err := Compare(tests.TestPassword, res)
 	assert.Nil(t, err)
 
 	assert.True(t, status)
@@ -66,7 +56,7 @@ func TestTrueCompare(t *testing.T) {
 func TestFalseCompare(t *testing.T) {
 	password := "fdsafdsafdsa"
 
-	baseRes, err := ParsePHC(baseHashInfo.PHC)
+	baseRes, err := ParsePHC(tests.DbRowInfo.PhcString)
 	assert.Nil(t, err)
 
 	status, err := Compare(password, baseRes)

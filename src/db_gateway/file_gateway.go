@@ -5,18 +5,17 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/bobllor/cloud-project/src/config"
 	"github.com/bobllor/cloud-project/src/file"
 	"github.com/bobllor/cloud-project/src/utils"
 )
 
 // NewFileGateway creates a new FileGateway for database related options.
-func NewFileGateway(database *sql.DB, config *config.Config) *FileGateway {
+func NewFileGateway(database *sql.DB, deps *utils.Deps) *FileGateway {
 	f := &FileGateway{
 		database:       database,
 		fileFieldCount: file.ColumnSize,
-		config:         config,
-		util:           DBUtility{log: config.Log},
+		deps:           deps,
+		util:           DBUtility{log: deps.Log},
 	}
 
 	return f
@@ -25,7 +24,7 @@ func NewFileGateway(database *sql.DB, config *config.Config) *FileGateway {
 type FileGateway struct {
 	database       *sql.DB
 	fileFieldCount int
-	config         *config.Config
+	deps           *utils.Deps
 	util           DBUtility
 }
 

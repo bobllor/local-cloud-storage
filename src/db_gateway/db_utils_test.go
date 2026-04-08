@@ -34,7 +34,7 @@ func TestSelectRow(t *testing.T) {
 
 	ffTest := FileFilterTest{}
 
-	rows, err := db.Query(query, testUserAccountID)
+	rows, err := db.Query(query, tests.DbRowInfo.AccountID)
 	assert.Nil(t, err)
 
 	err = SelectRow(rows, &ffTest)
@@ -72,7 +72,7 @@ func TestSelectRowsSlice(t *testing.T) {
 
 	ffTest := []FileFilterTest{}
 
-	rows, err := db.Query(query, testUserAccountID)
+	rows, err := db.Query(query, tests.DbRowInfo.AccountID)
 	assert.Nil(t, err)
 
 	err = SelectRows(rows, &ffTest)
@@ -96,7 +96,7 @@ func TestMultipleSelectRows(t *testing.T) {
 	assert.Nil(t, err)
 
 	for i, file := range files {
-		files[i].OwnerID = testUserAccountID
+		files[i].OwnerID = tests.DbRowInfo.AccountID
 
 		fileIDs = append(fileIDs, file.FileID)
 	}

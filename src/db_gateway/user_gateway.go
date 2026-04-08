@@ -5,26 +5,26 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/bobllor/cloud-project/src/config"
 	"github.com/bobllor/cloud-project/src/hasher"
 	"github.com/bobllor/cloud-project/src/user"
+	"github.com/bobllor/cloud-project/src/utils"
 	"github.com/google/uuid"
 )
 
 type UserGateway struct {
 	database       *sql.DB
 	userFieldCount int
-	config         *config.Config
+	deps           *utils.Deps
 	util           DBUtility
 }
 
-func NewUserGateway(db *sql.DB, config *config.Config) *UserGateway {
+func NewUserGateway(db *sql.DB, deps *utils.Deps) *UserGateway {
 	return &UserGateway{
 		database:       db,
 		userFieldCount: user.ColumnSize,
-		config:         config,
+		deps:           deps,
 		util: DBUtility{
-			log: config.Log,
+			log: deps.Log,
 		},
 	}
 }

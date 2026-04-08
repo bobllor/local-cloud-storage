@@ -5,17 +5,17 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/bobllor/cloud-project/src/config"
 	"github.com/bobllor/cloud-project/src/session"
+	"github.com/bobllor/cloud-project/src/utils"
 	"github.com/google/uuid"
 )
 
-func NewSessionGateway(db *sql.DB, cfg *config.Config) *SessionGateway {
+func NewSessionGateway(db *sql.DB, deps *utils.Deps) *SessionGateway {
 	sg := &SessionGateway{
 		database:          db,
 		sessionFieldCount: session.ColumnSize,
-		cfg:               cfg,
-		util:              DBUtility{log: cfg.Log},
+		deps:              deps,
+		util:              DBUtility{log: deps.Log},
 	}
 
 	return sg
@@ -24,7 +24,7 @@ func NewSessionGateway(db *sql.DB, cfg *config.Config) *SessionGateway {
 type SessionGateway struct {
 	database          *sql.DB
 	sessionFieldCount int
-	cfg               *config.Config
+	deps              *utils.Deps
 	util              DBUtility
 }
 

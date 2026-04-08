@@ -1,31 +1,25 @@
 package dbgateway
 
 import (
-	"io"
-	"log"
 	"testing"
 	"time"
 
 	"github.com/bobllor/assert"
-	"github.com/bobllor/cloud-project/src/config"
 	"github.com/bobllor/cloud-project/src/session"
+	"github.com/bobllor/cloud-project/src/tests"
 	"github.com/bobllor/cloud-project/src/user"
-	"github.com/bobllor/gologger"
-)
-
-const (
-	testSessionID = "7ca90f85-b1e0-4214-8ff6-4e3720cc8078"
+	"github.com/bobllor/cloud-project/src/utils"
 )
 
 func TestGetSession(t *testing.T) {
 	sg, err := newTestSessionGateway()
 	assert.Nil(t, err)
 
-	s, err := sg.GetSession(testUserAccountID)
+	s, err := sg.GetSession(tests.DbRowInfo.AccountID)
 	assert.Nil(t, err)
 
-	assert.Equal(t, s.AccountID, testUserAccountID)
-	assert.Equal(t, s.SessionID, testSessionID)
+	assert.Equal(t, s.AccountID, tests.DbRowInfo.AccountID)
+	assert.Equal(t, s.SessionID, tests.DbRowInfo.SessionID)
 }
 
 func TestUpsertSessionNew(t *testing.T) {
@@ -56,13 +50,13 @@ func TestUpsertSessionReplace(t *testing.T) {
 	sg, err := newTestSessionGateway()
 	assert.Nil(t, err)
 
-	baseS, err := sg.GetSession(testUserAccountID)
+	baseS, err := sg.GetSession(tests.DbRowInfo.AccountID)
 	assert.Nil(t, err)
 
-	sesh, err := sg.UpsertSession(testUserAccountID)
+	sesh, err := sg.UpsertSession(tests.DbRowInfo.AccountID)
 	assert.Nil(t, err)
 
-	newS, err := sg.GetSession(testUserAccountID)
+	newS, err := sg.GetSession(tests.DbRowInfo.AccountID)
 	assert.Nil(t, err)
 
 	// reset the updated values
@@ -70,7 +64,7 @@ func TestUpsertSessionReplace(t *testing.T) {
 		sg.database,
 		session.TableName,
 		session.ColumnAccountID,
-		testUserAccountID,
+		tests.DbRowInfo.AccountID,
 		ClauseData{
 			Columns: []string{session.ColumnColumnSessionID, session.ColumnCreatedOn, session.ColumnExpireOn},
 			Args:    []any{baseS.SessionID, baseS.CreatedOn, baseS.ExpireOn},
@@ -94,11 +88,9 @@ func newTestSessionGateway() (*SessionGateway, error) {
 		return nil, err
 	}
 
-	logger := gologger.NewLogger(log.New(io.Discard, "", log.Ltime), gologger.Lsilent)
+	deps := utils.NewTestDeps()
 
-	cfg := config.NewConfig(logger)
-
-	sg := NewSessionGateway(db, cfg)
+	sg := NewSessionGateway(db, deps)
 
 	return sg, nil
 }

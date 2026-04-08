@@ -7,6 +7,7 @@ import (
 
 	"github.com/bobllor/assert"
 	"github.com/bobllor/cloud-project/src/file"
+	"github.com/bobllor/cloud-project/src/tests"
 )
 
 func TestBuildSingleQuery(t *testing.T) {
@@ -84,7 +85,7 @@ func TestEmptyClauseError(t *testing.T) {
 func TestRegisterNoConditions(t *testing.T) {
 	cb := NewClauseBuilder()
 
-	cb.Equal(file.ColumnFileOwnerID, testUserAccountID)
+	cb.Equal(file.ColumnFileOwnerID, tests.DbRowInfo.AccountID)
 	err := cb.RegisterConditions([]WhereCondition{})
 	assert.Nil(t, err)
 
@@ -102,7 +103,7 @@ func TestRegisterConditions(t *testing.T) {
 	conditions := []WhereCondition{
 		{
 			Column:             file.ColumnFileID,
-			Args:               []any{testFileID},
+			Args:               []any{tests.DbRowInfo.FileID},
 			ComparisonOperator: Equal,
 			LogicalOperator:    OperatorAnd,
 		},
@@ -114,7 +115,7 @@ func TestRegisterConditions(t *testing.T) {
 		},
 	}
 
-	cb.Equal(file.ColumnFileOwnerID, testUserAccountID)
+	cb.Equal(file.ColumnFileOwnerID, tests.DbRowInfo.AccountID)
 	err := cb.RegisterConditions(conditions)
 	assert.Nil(t, err)
 

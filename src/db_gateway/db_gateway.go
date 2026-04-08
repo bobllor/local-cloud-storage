@@ -18,6 +18,17 @@ type Gateway struct {
 	Session *SessionGateway
 }
 
+// NewGateway creates a new Gateway containing the database gateways.
+func NewGateway(fg *FileGateway, ug *UserGateway, sg *SessionGateway) *Gateway {
+	gw := &Gateway{
+		File:    fg,
+		User:    ug,
+		Session: sg,
+	}
+
+	return gw
+}
+
 // NewDatabase opens the SQL database and returns a sql.DB.
 // It will return an error if any errors occur.
 //

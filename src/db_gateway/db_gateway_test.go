@@ -6,13 +6,14 @@ import (
 
 	"github.com/bobllor/assert"
 	"github.com/bobllor/cloud-project/src/file"
+	"github.com/bobllor/cloud-project/src/tests"
 	"github.com/go-sql-driver/mysql"
 )
 
 func TestClauseDataBuildSetQuery(t *testing.T) {
 	cd := ClauseData{
 		Columns: []string{file.ColumnFileID, file.ColumnFileName},
-		Args:    []any{testFileID, "a file text.txt"},
+		Args:    []any{tests.DbRowInfo.FileID, "a file text.txt"},
 	}
 
 	expectedQuery := fmt.Sprintf("SET %s = ?,%s = ?", file.ColumnFileID, file.ColumnFileName)
