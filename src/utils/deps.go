@@ -7,7 +7,7 @@ import (
 	"github.com/bobllor/gologger"
 )
 
-// Deps is used for dependency utilities used with structs.
+// Deps is used to provide utilities to structs.
 type Deps struct {
 	// Log is the logging struct.
 	Log *gologger.Logger
