@@ -8,6 +8,22 @@ import (
 	"time"
 )
 
+type TestDbInfo struct {
+	User     string
+	Addr     string
+	Password string
+	Net      string
+	DbName   string
+}
+
+var DbInfo = TestDbInfo{
+	User:     "root",
+	Addr:     ":3307",
+	Password: "",
+	Net:      "tcp",
+	DbName:   "TestLocalCloudStorage",
+}
+
 // CreateFiles creates random files in the root. It will return
 // a string slice containing the paths of the files created.
 //
