@@ -6,7 +6,7 @@ import (
 
 type Server struct {
 	httpServer *http.Server
-	mux        *http.ServeMux
+	Handler    *http.ServeMux
 }
 
 // NewServer creates a new Server for registering endpoints and
@@ -20,7 +20,7 @@ func NewServer(addr string) (*Server, error) {
 
 	s := &Server{
 		httpServer: serv,
-		mux:        mux,
+		Handler:    mux,
 	}
 
 	return s, nil
@@ -28,12 +28,27 @@ func NewServer(addr string) (*Server, error) {
 
 // Start starts the server and listens on the address. It will return an
 // error if any errors occur during the start up.
+//
+// This should only used for development. Use s.StartTLS() for production.
 func (s *Server) Start() error {
 	return s.httpServer.ListenAndServe()
+}
+
+// StartTLS starts the server and listens on the address with TLS. It will return
+// an error if any errors occur during the start up.
+//
+// This requires the cert and key files.
+func (s *Server) StartTLS(certFile string, keyFile string) error {
+	// TODO: need to configure TLS here.
+	// since this is a local project i think i can go with insecure and
+	// bare minimum TLS settings, but ill look into the options.
+	// most likely ill make this configurable via yaml.
+
+	return s.httpServer.ListenAndServeTLS(certFile, keyFile)
 }
 
 // RegisterHandler registers a new handler for the Server.
 // This will panic if an existing pattern is given to register.
 func (s *Server) RegisterHandler(pattern string, handler func(http.ResponseWriter, *http.Request)) {
-	s.mux.HandleFunc(pattern, handler)
+	s.Handler.HandleFunc(pattern, handler)
 }
