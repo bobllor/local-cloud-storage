@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/bobllor/cloud-project/src/config"
+	"github.com/bobllor/cloud-project/src/utils"
 )
 
 const (
@@ -16,16 +16,16 @@ const (
 
 // NewDiskWriter creates a new DiskWriter for writing
 // data to the disk.
-func NewDiskWriter(chunkSize int, config *config.Config) *DiskWriter {
+func NewDiskWriter(chunkSize int, deps *utils.Deps) *DiskWriter {
 	return &DiskWriter{
 		chunkSize: chunkSize,
-		config:    config,
+		deps:      deps,
 	}
 }
 
 type DiskWriter struct {
 	chunkSize int
-	config    *config.Config
+	deps      *utils.Deps
 }
 
 // WriteToDisk writes the bytes to the disk path.
@@ -51,7 +51,7 @@ func (dw *DiskWriter) WriteToDisk(path string, data []byte) (os.FileInfo, error)
 	}
 	defer f.Close()
 
-	dw.config.Log.Infof("Writing %d byte(s) to disk", len(data))
+	dw.deps.Log.Infof("Writing %d byte(s) to disk", len(data))
 
 	currSize := 0
 	// handles if chunkSize is larger than the given data size
@@ -75,8 +75,8 @@ func (dw *DiskWriter) WriteToDisk(path string, data []byte) (os.FileInfo, error)
 		debugCounter += 1
 	}
 
-	dw.config.Log.Debugf("Looped data %d time(s)", debugCounter)
-	dw.config.Log.Infof("Wrote %d byte(s)", currSize)
+	dw.deps.Log.Debugf("Looped data %d time(s)", debugCounter)
+	dw.deps.Log.Infof("Wrote %d byte(s)", currSize)
 
 	info, err := os.Stat(path)
 	if err != nil {
