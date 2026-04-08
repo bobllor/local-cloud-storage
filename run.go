@@ -8,6 +8,7 @@ import (
 	"github.com/bobllor/cloud-project/src/config"
 	dbgateway "github.com/bobllor/cloud-project/src/db_gateway"
 	"github.com/bobllor/cloud-project/src/server"
+	"github.com/bobllor/cloud-project/src/utils"
 	"github.com/bobllor/gologger"
 )
 
@@ -64,11 +65,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	stdConfig := config.NewConfig(logger)
+	deps := utils.NewDeps(logger)
 
-	fg := dbgateway.NewFileGateway(fdb, stdConfig)
-	ug := dbgateway.NewUserGateway(udb, stdConfig)
-	sg := dbgateway.NewSessionGateway(udb, stdConfig)
+	fg := dbgateway.NewFileGateway(fdb, deps)
+	ug := dbgateway.NewUserGateway(udb, deps)
+	sg := dbgateway.NewSessionGateway(udb, deps)
 
 	gw := &dbgateway.Gateway{
 		File:    fg,
