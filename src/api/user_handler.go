@@ -1,10 +1,14 @@
 package api
 
 import (
-	"fmt"
+	"encoding/json"
 	"net/http"
 
 	dbcon "github.com/bobllor/cloud-project/src/db_gateway"
+)
+
+const (
+	UserRegisterRoute = "POST /register"
 )
 
 func NewUserHandler(gw *dbcon.Gateway) *UserHandler {
@@ -28,8 +32,7 @@ type UserHandler struct {
 }
 
 type GetUserHandler struct {
-	Gateway  *dbcon.Gateway
-	Handlers HandlerMap
+	Gateway *dbcon.Gateway
 }
 
 func (gu *GetUserHandler) AuthenticateUser(w http.ResponseWriter, r *http.Request) {
@@ -37,10 +40,27 @@ func (gu *GetUserHandler) AuthenticateUser(w http.ResponseWriter, r *http.Reques
 }
 
 type PostUserHandler struct {
-	Gateway  *dbcon.Gateway
-	Handlers HandlerMap
+	Gateway *dbcon.Gateway
 }
 
 func (pu *PostUserHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
-	fmt.Println(r)
+	type User struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+
+	var user User
+
+	err := json.NewDecoder(r.Body).Decode(&user)
+	if err != nil {
+		http.Error(
+			w,
+			err.Error(),
+			http.StatusBadRequest,
+		)
+
+		return
+	}
+
+	w.WriteHeader(http.StatusAccepted)
 }
