@@ -175,20 +175,47 @@ func getScannableValues(size int, v reflect.Value) []any {
 	return values
 }
 
-// MakeArgs creates a new any slice from the given slice arguments of
-// type T. All the arguments of type T must be the same type.
+// AppendArgs appends to s []any of any arguments.
 //
-// This is primarily used for combining []any for query args.
-func MakeArgs[T any](args ...[]T) []any {
+// This is used to build onto an existing []any for
+// query args.
+func AppendArgs(s *[]any, arg ...any) {
+	for _, v := range arg {
+		*s = append(*s, v)
+	}
+}
+
+// MakeArgs creates a new any slice from any given arguments.
+func MakeArgs(args ...any) []any {
 	out := []any{}
 
-	for _, s := range args {
-		for _, v := range s {
-			out = append(out, v)
+	for _, a := range args {
+		av := reflect.ValueOf(a)
+		v := getReflectValue(av)
+
+		if v.Kind() != reflect.Slice {
+			out = append(out, a)
+		} else {
+			for i := 0; i < v.Len(); i++ {
+				vv := v.Index(i)
+				out = append(out, vv.Interface())
+			}
 		}
 	}
 
 	return out
+}
+
+// getReflectValue is a recursive call that retrieves the underlying value
+// of v.
+//
+// If v is not a pointer, then it will return v.
+func getReflectValue(v reflect.Value) reflect.Value {
+	if v.Kind() != reflect.Pointer {
+		return v
+	}
+
+	return getReflectValue(v.Elem())
 }
 
 // DBUtility is a utility struct for database related operations.
