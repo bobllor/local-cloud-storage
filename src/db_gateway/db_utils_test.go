@@ -77,8 +77,6 @@ func TestSelectRowsSlice(t *testing.T) {
 
 	err = SelectRows(rows, &ffTest)
 	assert.Nil(t, err)
-
-	fmt.Println(ffTest)
 }
 
 func TestMultipleSelectRows(t *testing.T) {
@@ -172,4 +170,14 @@ func TestFailSelectRowsInvalidSize(t *testing.T) {
 
 	err = SelectRows(rows, &v)
 	assert.NotNil(t, err)
+}
+
+func TestMakeArgs(t *testing.T) {
+	s1 := []any{"1", "2", "3"}
+	s2 := []any{1, 2, 3}
+	s3 := []any{true, true, false}
+
+	args := MakeArgs(s1, s2, s3)
+
+	assert.Equal(t, len(args), len(s1)+len(s2)+len(s3))
 }
