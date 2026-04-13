@@ -45,6 +45,8 @@ type PostUserHandler struct {
 	Gateway *dbcon.Gateway
 }
 
+// RegisterUser is the handler for registering users. A new session.Session struct
+// will be marshalled as the response.
 func (pu *PostUserHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 	type User struct {
 		Username string `json:"username"`
