@@ -173,11 +173,32 @@ func TestFailSelectRowsInvalidSize(t *testing.T) {
 }
 
 func TestMakeArgs(t *testing.T) {
-	s1 := []any{"1", "2", "3"}
-	s2 := []any{1, 2, 3}
-	s3 := []any{true, true, false}
+	s1 := []string{"1", "2", "3"}
+	s2 := []int{1, 2, 3}
+	s3 := []bool{true, true, false}
 
-	args := MakeArgs(s1, s2, s3)
+	t.Run("Slice Arguments Only", func(t *testing.T) {
+		args := MakeArgs(s1, s2, s3)
+		assert.Equal(t, len(args), len(s1)+len(s2)+len(s3))
+	})
 
-	assert.Equal(t, len(args), len(s1)+len(s2)+len(s3))
+	t.Run("Any Arguments", func(t *testing.T) {
+		addBase := 3
+		args := MakeArgs(s1, s2, s3, "hello", 123, true)
+		assert.Equal(t, len(args), len(s1)+len(s2)+len(s3)+addBase)
+	})
+
+	t.Run("Nil Arguments Only", func(t *testing.T) {
+		addBase := 5
+		args := MakeArgs(nil, nil, nil, nil, nil)
+		assert.Equal(t, len(args), addBase)
+	})
+}
+
+func TestMakeArgsPtr(t *testing.T) {
+	s1 := []int{1, 2, 3, 4}
+
+	args := MakeArgs(&s1)
+
+	assert.Equal(t, len(args), len(s1))
 }
