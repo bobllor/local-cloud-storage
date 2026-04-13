@@ -145,8 +145,7 @@ func TestFailSelectRowsNilRows(t *testing.T) {
 func TestFailSelectRowsNonPointer(t *testing.T) {
 	v := []user.UserAccount{}
 
-	udb, err := newTestUserGateway()
-	assert.Nil(t, err)
+	udb := newTestUserGateway(t)
 
 	query := fmt.Sprintf("SELECT * FROM %s", user.TableName)
 
@@ -160,8 +159,7 @@ func TestFailSelectRowsNonPointer(t *testing.T) {
 func TestFailSelectRowsInvalidSize(t *testing.T) {
 	v := []user.UserAccount{}
 
-	udb, err := newTestUserGateway()
-	assert.Nil(t, err)
+	udb := newTestUserGateway(t)
 
 	query := fmt.Sprintf("SELECT %s FROM %s", user.ColumnAccountID, user.TableName)
 
