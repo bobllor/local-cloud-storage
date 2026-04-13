@@ -68,5 +68,5 @@ INSERT INTO Session
         "7ca90f85-b1e0-4214-8ff6-4e3720cc8078",
         "89672a64-f3ff-490c-8f2d-7e5cf5d4aa70", 
         NOW(), 
-        DATE_ADD(NOW(), INTERVAL 30 DAY)
+        DATE_ADD(NOW(), INTERVAL 14 DAY)
     );
