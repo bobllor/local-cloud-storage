@@ -23,8 +23,7 @@ func TestGetSession(t *testing.T) {
 }
 
 func TestUpsertSessionNew(t *testing.T) {
-	ug, err := newTestUserGateway()
-	assert.Nil(t, err)
+	ug := newTestUserGateway(t)
 	sg, err := newTestSessionGateway()
 	assert.Nil(t, err)
 
