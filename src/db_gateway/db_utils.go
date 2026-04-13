@@ -108,7 +108,7 @@ func UpdateRow(db *sql.DB, table string, whereColumn string, whereArg any, claus
 	cb := NewClauseBuilder()
 	cb.In(whereColumn, whereArg)
 
-	clQ, err := clause.BuildSetQuery()
+	clQ, sargs, err := clause.BuildSetQuery()
 	if err != nil {
 		return nil, err
 	}
@@ -120,14 +120,11 @@ func UpdateRow(db *sql.DB, table string, whereColumn string, whereArg any, claus
 		return nil, err
 	}
 
-	finalArgs := []any{}
-
-	finalArgs = append(finalArgs, clause.Args...)
-	finalArgs = append(finalArgs, args...)
+	execArgs := MakeArgs(sargs, args)
 
 	query := baseQ + " " + cbQ
 
-	res, err := execQuery(db, query, finalArgs...)
+	res, err := execQuery(db, query, execArgs...)
 	if err != nil {
 		return nil, err
 	}
@@ -176,6 +173,22 @@ func getScannableValues(size int, v reflect.Value) []any {
 	}
 
 	return values
+}
+
+// MakeArgs creates a new any slice from the given slice arguments of
+// type T. All the arguments of type T must be the same type.
+//
+// This is primarily used for combining []any for query args.
+func MakeArgs[T any](args ...[]T) []any {
+	out := []any{}
+
+	for _, s := range args {
+		for _, v := range s {
+			out = append(out, v)
+		}
+	}
+
+	return out
 }
 
 // DBUtility is a utility struct for database related operations.
