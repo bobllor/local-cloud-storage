@@ -121,12 +121,12 @@ func (f *FileGateway) UpdateFileByID(fileOwnerID string, fileID string, cd Claus
 func (f *FileGateway) UpdateFiles(fileOwnerID string, cd ClauseData, conditions []WhereCondition) error {
 	cb := NewClauseBuilder()
 
-	setQ, err := cd.BuildSetQuery()
+	setQ, sargs, err := cd.BuildSetQuery()
 	if err != nil {
 		return fmt.Errorf("failed to validate ClauseData: %v", err)
 	}
 
-	baseQuery := fmt.Sprintf("UPDATE %s", file.TableName) + " " + setQ
+	baseQuery := fmt.Sprintf("UPDATE %s %s", file.TableName, setQ)
 
 	cb.Equal(file.ColumnFileOwnerID, fileOwnerID)
 
@@ -142,10 +142,7 @@ func (f *FileGateway) UpdateFiles(fileOwnerID string, cd ClauseData, conditions 
 
 	query := baseQuery + " " + whereQ
 
-	execArgs := []any{}
-
-	execArgs = append(execArgs, cd.Args...)
-	execArgs = append(execArgs, args...)
+	execArgs := MakeArgs(sargs, args)
 
 	f.util.LogQueryAndArgs(query, execArgs)
 
