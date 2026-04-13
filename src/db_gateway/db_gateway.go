@@ -64,6 +64,12 @@ func NewConfig(user string, passwd string, net string, addr string, dbName strin
 	return c
 }
 
+// NewClauseData creates a new ClauseData for building clauses for
+// column preparations.
+func NewClauseData() *ClauseData {
+	return &ClauseData{}
+}
+
 // ClauseData is used to build placeholders for clauses. This is used for
 // preparing columns.
 type ClauseData struct {
@@ -73,19 +79,44 @@ type ClauseData struct {
 	Args []any
 }
 
-// BuildSetQuery builds the query for SET operations.
-// The output will contain: "SET Column = value, Column=value, ..."
-func (cd *ClauseData) BuildSetQuery() (string, error) {
+// AddColumns adds the columns to the data.
+// Note that for every column that is added, it is expected to have an equivalent
+// argument.
+//
+// It will return the number of columns added.
+func (cd *ClauseData) AddColumns(columns ...string) int {
+	cd.Columns = append(cd.Columns, columns...)
+
+	return len(columns)
+}
+
+// AddArgs adds any given arguments to the data.
+// Note that for every argument that is added, it is expected to have an equivalent
+// column.
+//
+// It will return the number of arguments added.
+func (cd *ClauseData) AddArgs(args ...any) int {
+	cd.Args = append(cd.Args, args...)
+
+	return len(args)
+}
+
+// BuildSetQuery builds the query for SET operations. It returns the query
+// string: "SET Column1=value1, Column2=value2, ...".
+// The arguments is also returned.
+//
+// An error will occur if the length of Args and Columns are not the same.
+func (cd *ClauseData) BuildSetQuery() (string, []any, error) {
 	err := cd.Validate()
 	if err != nil {
-		return "", fmt.Errorf("failed to validate ClauseData: %v", err)
+		return "", nil, fmt.Errorf("failed to validate ClauseData: %v", err)
 	}
 
 	baseQuery := "SET"
 	setPlaceholder := BuildSetPlaceholder(cd.Columns)
 	query := baseQuery + " " + setPlaceholder
 
-	return query, nil
+	return query, cd.Args, nil
 }
 
 // Validate is used to validate ClauseData. An error will be returned if
