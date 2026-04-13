@@ -10,6 +10,10 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	ExpireTimeDays = 14
+)
+
 func NewSessionGateway(db *sql.DB, deps *utils.Deps) *SessionGateway {
 	sg := &SessionGateway{
 		database:          db,
@@ -71,9 +75,8 @@ func (sg *SessionGateway) UpsertSession(accountID string) (*session.Session, err
 	sessionID := uuid.NewString()
 	query := fmt.Sprintf("INSERT INTO %s", session.TableName)
 
-	// expiration date is 30 days from the current time
 	currTime := time.Now().UTC()
-	expireTime := currTime.AddDate(0, 0, 30)
+	expireTime := currTime.AddDate(0, 0, ExpireTimeDays)
 	ses := session.Session{
 		SessionID: sessionID,
 		AccountID: accountID,
@@ -92,9 +95,7 @@ func (sg *SessionGateway) UpsertSession(accountID string) (*session.Session, err
 		session.ColumnExpireOn,
 	)
 
-	args = append(args, sessionID)
-	args = append(args, currTime)
-	args = append(args, expireTime)
+	AppendArgs(&args, sessionID, currTime, expireTime)
 
 	query = query + " " + "VALUES" + placeholder + " " + duplicateStr
 
