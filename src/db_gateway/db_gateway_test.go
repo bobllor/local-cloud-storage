@@ -18,10 +18,10 @@ func TestClauseDataBuildSetQuery(t *testing.T) {
 
 	expectedQuery := fmt.Sprintf("SET %s = ?,%s = ?", file.ColumnFileID, file.ColumnFileName)
 
-	setQ, err := cd.BuildSetQuery()
+	setQ, args, err := cd.BuildSetQuery()
 	assert.Nil(t, err)
-
 	assert.Equal(t, setQ, expectedQuery)
+	assert.Equal(t, len(args), len(cd.Args))
 }
 
 // newTestDBConfig creates a test DB config for use in test environments.
