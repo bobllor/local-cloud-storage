@@ -3,12 +3,12 @@ package session
 import "time"
 
 const (
-	ColumnSize            = 4
-	TableName             = "Session"
-	ColumnColumnSessionID = "SessionID"
-	ColumnAccountID       = "AccountID"
-	ColumnCreatedOn       = "CreatedOn"
-	ColumnExpireOn        = "ExpireOn"
+	ColumnSize      = 4
+	TableName       = "Session"
+	ColumnSessionID = "SessionID"
+	ColumnAccountID = "AccountID"
+	ColumnCreatedOn = "CreatedOn"
+	ColumnExpireOn  = "ExpireOn"
 )
 
 type Session struct {
