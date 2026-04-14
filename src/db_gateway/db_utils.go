@@ -55,7 +55,8 @@ func SelectRow(rows *sql.Rows, src interface{}) error {
 }
 
 // SelectRows iterates over rows to fill a given source slice of any type.
-// src must be a pointer to a slice.
+// src must be a pointer to a slice and the type must not be a pointer.
+// If these are false then it will panic.
 //
 // The columns length found in rows must be equal to the number of fields given
 // in src, and the order of the columns must match the order of the type in src.
@@ -74,7 +75,7 @@ func SelectRows(rows *sql.Rows, src interface{}) error {
 	}
 
 	// the type of the slice, ptr slice any -> slice any -> any
-	t := reflect.TypeOf(src).Elem().Elem()
+	t := getType(reflect.TypeOf(src))
 	ve := v.Elem()
 
 	if t.NumField() != len(columns) {
@@ -173,6 +174,30 @@ func getScannableValues(size int, v reflect.Value) []any {
 	}
 
 	return values
+}
+
+// getValue is a recursive call that takes v and will return
+// the first occurrence of a non-pointer v.
+// If v is a pointer, it will dereference it until it is not a pointer.
+func getValue(v reflect.Value) reflect.Value {
+	if v.Kind() != reflect.Pointer {
+		return v
+	}
+
+	return getValue(v.Elem())
+}
+
+// getType is a recursive call that takes t and will return
+// the first occurrence of a non-pointer t.
+// If t is a pointer, it will dereference it until it is not a pointer.
+//
+// Slices are ignored with getType.
+func getType(t reflect.Type) reflect.Type {
+	if t.Kind() != reflect.Pointer && t.Kind() != reflect.Slice {
+		return t
+	}
+
+	return getType(t.Elem())
 }
 
 // AppendArgs appends to s []any of any arguments.
