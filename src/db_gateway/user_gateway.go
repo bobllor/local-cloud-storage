@@ -69,11 +69,9 @@ func (ug *UserGateway) AddUser(username string, password string) (*user.UserAcco
 	return acc, err
 }
 
-// ConfirmUser confirms if the credentials are correct for the user. The username and
+// ValidateUser validates if the credentials are correct for the user. The username and
 // password is compared and will return a boolean or an error if one occurs.
-//
-// An error will be returned if the user does not exist in the database.
-func (ug *UserGateway) CheckCredentials(username string, password string) (bool, error) {
+func (ug *UserGateway) ValidateUser(username string, password string) (bool, error) {
 	user, err := ug.GetUserByUsername(username)
 	if err != nil {
 		return false, err
