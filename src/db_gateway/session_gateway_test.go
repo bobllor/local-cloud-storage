@@ -11,11 +11,10 @@ import (
 	"github.com/bobllor/cloud-project/src/utils"
 )
 
-func TestGetSession(t *testing.T) {
-	sg, err := newTestSessionGateway()
-	assert.Nil(t, err)
+func TestGetSessionByAccountID(t *testing.T) {
+	sg := newTestSessionGateway(t)
 
-	s, err := sg.GetSession(tests.DbRowInfo.AccountID)
+	s, err := sg.GetSessionByAccountID(tests.DbRowInfo.AccountID)
 	assert.Nil(t, err)
 
 	assert.Equal(t, s.AccountID, tests.DbRowInfo.AccountID)
@@ -24,8 +23,7 @@ func TestGetSession(t *testing.T) {
 
 func TestUpsertSessionNew(t *testing.T) {
 	ug := newTestUserGateway(t)
-	sg, err := newTestSessionGateway()
-	assert.Nil(t, err)
+	sg := newTestSessionGateway(t)
 
 	usr, err := ug.AddUser("username.here", "password")
 	assert.Nil(t, err)
@@ -33,7 +31,7 @@ func TestUpsertSessionNew(t *testing.T) {
 	addS, err := sg.UpsertSession(usr.AccountID)
 	assert.Nil(t, err)
 
-	sesh, err := sg.GetSession(addS.AccountID)
+	sesh, err := sg.GetSessionByAccountID(addS.AccountID)
 	assert.Nil(t, err)
 
 	_, err = DropRows(ug.database, user.TableName, user.ColumnAccountID, usr.AccountID)
@@ -46,16 +44,15 @@ func TestUpsertSessionNew(t *testing.T) {
 }
 
 func TestUpsertSessionReplace(t *testing.T) {
-	sg, err := newTestSessionGateway()
-	assert.Nil(t, err)
+	sg := newTestSessionGateway(t)
 
-	baseS, err := sg.GetSession(tests.DbRowInfo.AccountID)
+	baseS, err := sg.GetSessionByAccountID(tests.DbRowInfo.AccountID)
 	assert.Nil(t, err)
 
 	sesh, err := sg.UpsertSession(tests.DbRowInfo.AccountID)
 	assert.Nil(t, err)
 
-	newS, err := sg.GetSession(tests.DbRowInfo.AccountID)
+	newS, err := sg.GetSessionByAccountID(tests.DbRowInfo.AccountID)
 	assert.Nil(t, err)
 
 	// reset the updated values
@@ -65,7 +62,7 @@ func TestUpsertSessionReplace(t *testing.T) {
 		session.ColumnAccountID,
 		tests.DbRowInfo.AccountID,
 		ClauseData{
-			Columns: []string{session.ColumnColumnSessionID, session.ColumnCreatedOn, session.ColumnExpireOn},
+			Columns: []string{session.ColumnSessionID, session.ColumnCreatedOn, session.ColumnExpireOn},
 			Args:    []any{baseS.SessionID, baseS.CreatedOn, baseS.ExpireOn},
 		},
 	)
@@ -80,16 +77,93 @@ func TestUpsertSessionReplace(t *testing.T) {
 	assert.True(t, newS.ExpireOn.Truncate(time.Minute).Equal(sesh.ExpireOn.Truncate(time.Minute)))
 }
 
-func newTestSessionGateway() (*SessionGateway, error) {
+func TestGetSessionBySessionID(t *testing.T) {
+	sg := newTestSessionGateway(t)
+
+	ses, err := sg.GetSessionBySessionID(tests.DbRowInfo.SessionID)
+	assert.Nil(t, err)
+	assert.NotNil(t, ses)
+
+	assert.Equal(t, ses.SessionID, tests.DbRowInfo.SessionID)
+	assert.Equal(t, ses.AccountID, tests.DbRowInfo.AccountID)
+}
+
+func TestGetSessionBySessionIDNone(t *testing.T) {
+	sg := newTestSessionGateway(t)
+
+	ses, err := sg.GetSessionBySessionID("nonexistentsid")
+	assert.Nil(t, err)
+	assert.Nil(t, ses)
+}
+
+func TestValidateSession(t *testing.T) {
+	sg := newTestSessionGateway(t)
+
+	t.Run("Valid ID", func(t *testing.T) {
+		status, err := sg.ValidateSession(tests.DbRowInfo.AccountID, tests.DbRowInfo.SessionID)
+		assert.Nil(t, err)
+		assert.True(t, status)
+	})
+
+	t.Run("Invalid session IDs", func(t *testing.T) {
+		ids := []string{"", "nonexistentid"}
+
+		for _, id := range ids {
+			status, err := sg.ValidateSession(tests.DbRowInfo.AccountID, id)
+			assert.Nil(t, err)
+			assert.False(t, status)
+		}
+	})
+
+	t.Run("Invalid account IDs", func(t *testing.T) {
+		ids := []string{"", "nonexistentid"}
+		for _, id := range ids {
+			status, err := sg.ValidateSession(id, tests.DbRowInfo.SessionID)
+			assert.Nil(t, err)
+			assert.False(t, status)
+		}
+	})
+
+	t.Run("Expiration time expected false", func(t *testing.T) {
+		ug := newTestUserGateway(t)
+		acc, err := ug.AddUser("a.new.user", "password12345")
+		assert.Nil(t, err)
+
+		t.Cleanup(func() {
+			_, err := DropRows(sg.database, user.TableName, user.ColumnAccountID, acc.AccountID)
+			assert.Nil(t, err)
+		})
+
+		baseSess, err := sg.UpsertSession(acc.AccountID)
+		assert.Nil(t, err)
+
+		_, err = UpdateRow(
+			sg.database,
+			session.TableName,
+			session.ColumnAccountID,
+			acc.AccountID,
+			ClauseData{
+				Columns: []string{session.ColumnExpireOn},
+				Args:    []any{baseSess.ExpireOn.AddDate(0, 0, -ExpireTimeDays-1).UTC()},
+			},
+		)
+		assert.Nil(t, err)
+
+		stat, err := sg.ValidateSession(acc.AccountID, baseSess.SessionID)
+		assert.Nil(t, err)
+		assert.False(t, stat)
+	})
+
+}
+
+func newTestSessionGateway(t *testing.T) *SessionGateway {
 	dbCfg := newTestDBConfig()
 	db, err := NewDatabase(dbCfg)
-	if err != nil {
-		return nil, err
-	}
+	assert.Nil(t, err)
 
 	deps := utils.NewTestDeps()
 
 	sg := NewSessionGateway(db, deps)
 
-	return sg, nil
+	return sg
 }
