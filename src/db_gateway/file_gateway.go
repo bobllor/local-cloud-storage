@@ -5,20 +5,17 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/bobllor/cloud-project/src/config"
 	"github.com/bobllor/cloud-project/src/file"
 	"github.com/bobllor/cloud-project/src/utils"
 )
 
-const ()
-
 // NewFileGateway creates a new FileGateway for database related options.
-func NewFileGateway(database *sql.DB, config *config.Config) *FileGateway {
+func NewFileGateway(database *sql.DB, deps *utils.Deps) *FileGateway {
 	f := &FileGateway{
 		database:       database,
 		fileFieldCount: file.ColumnSize,
-		config:         config,
-		util:           DBUtility{log: config.Log},
+		deps:           deps,
+		util:           DBUtility{log: deps.Log},
 	}
 
 	return f
@@ -27,7 +24,7 @@ func NewFileGateway(database *sql.DB, config *config.Config) *FileGateway {
 type FileGateway struct {
 	database       *sql.DB
 	fileFieldCount int
-	config         *config.Config
+	deps           *utils.Deps
 	util           DBUtility
 }
 
@@ -124,12 +121,12 @@ func (f *FileGateway) UpdateFileByID(fileOwnerID string, fileID string, cd Claus
 func (f *FileGateway) UpdateFiles(fileOwnerID string, cd ClauseData, conditions []WhereCondition) error {
 	cb := NewClauseBuilder()
 
-	setQ, err := cd.BuildSetQuery()
+	setQ, sargs, err := cd.BuildSetQuery()
 	if err != nil {
 		return fmt.Errorf("failed to validate ClauseData: %v", err)
 	}
 
-	baseQuery := fmt.Sprintf("UPDATE %s", file.TableName) + " " + setQ
+	baseQuery := fmt.Sprintf("UPDATE %s %s", file.TableName, setQ)
 
 	cb.Equal(file.ColumnFileOwnerID, fileOwnerID)
 
@@ -145,10 +142,7 @@ func (f *FileGateway) UpdateFiles(fileOwnerID string, cd ClauseData, conditions 
 
 	query := baseQuery + " " + whereQ
 
-	execArgs := []any{}
-
-	execArgs = append(execArgs, cd.Args...)
-	execArgs = append(execArgs, args...)
+	execArgs := MakeArgs(sargs, args)
 
 	f.util.LogQueryAndArgs(query, execArgs)
 

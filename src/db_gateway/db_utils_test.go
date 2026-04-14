@@ -34,7 +34,7 @@ func TestSelectRow(t *testing.T) {
 
 	ffTest := FileFilterTest{}
 
-	rows, err := db.Query(query, testUserAccountID)
+	rows, err := db.Query(query, tests.DbRowInfo.AccountID)
 	assert.Nil(t, err)
 
 	err = SelectRow(rows, &ffTest)
@@ -72,13 +72,11 @@ func TestSelectRowsSlice(t *testing.T) {
 
 	ffTest := []FileFilterTest{}
 
-	rows, err := db.Query(query, testUserAccountID)
+	rows, err := db.Query(query, tests.DbRowInfo.AccountID)
 	assert.Nil(t, err)
 
 	err = SelectRows(rows, &ffTest)
 	assert.Nil(t, err)
-
-	fmt.Println(ffTest)
 }
 
 func TestMultipleSelectRows(t *testing.T) {
@@ -96,7 +94,7 @@ func TestMultipleSelectRows(t *testing.T) {
 	assert.Nil(t, err)
 
 	for i, file := range files {
-		files[i].OwnerID = testUserAccountID
+		files[i].OwnerID = tests.DbRowInfo.AccountID
 
 		fileIDs = append(fileIDs, file.FileID)
 	}
@@ -147,8 +145,7 @@ func TestFailSelectRowsNilRows(t *testing.T) {
 func TestFailSelectRowsNonPointer(t *testing.T) {
 	v := []user.UserAccount{}
 
-	udb, err := newTestUserGateway()
-	assert.Nil(t, err)
+	udb := newTestUserGateway(t)
 
 	query := fmt.Sprintf("SELECT * FROM %s", user.TableName)
 
@@ -162,8 +159,7 @@ func TestFailSelectRowsNonPointer(t *testing.T) {
 func TestFailSelectRowsInvalidSize(t *testing.T) {
 	v := []user.UserAccount{}
 
-	udb, err := newTestUserGateway()
-	assert.Nil(t, err)
+	udb := newTestUserGateway(t)
 
 	query := fmt.Sprintf("SELECT %s FROM %s", user.ColumnAccountID, user.TableName)
 
@@ -172,4 +168,35 @@ func TestFailSelectRowsInvalidSize(t *testing.T) {
 
 	err = SelectRows(rows, &v)
 	assert.NotNil(t, err)
+}
+
+func TestMakeArgs(t *testing.T) {
+	s1 := []string{"1", "2", "3"}
+	s2 := []int{1, 2, 3}
+	s3 := []bool{true, true, false}
+
+	t.Run("Slice Arguments Only", func(t *testing.T) {
+		args := MakeArgs(s1, s2, s3)
+		assert.Equal(t, len(args), len(s1)+len(s2)+len(s3))
+	})
+
+	t.Run("Any Arguments", func(t *testing.T) {
+		addBase := 3
+		args := MakeArgs(s1, s2, s3, "hello", 123, true)
+		assert.Equal(t, len(args), len(s1)+len(s2)+len(s3)+addBase)
+	})
+
+	t.Run("Nil Arguments Only", func(t *testing.T) {
+		addBase := 5
+		args := MakeArgs(nil, nil, nil, nil, nil)
+		assert.Equal(t, len(args), addBase)
+	})
+}
+
+func TestMakeArgsPtr(t *testing.T) {
+	s1 := []int{1, 2, 3, 4}
+
+	args := MakeArgs(&s1)
+
+	assert.Equal(t, len(args), len(s1))
 }

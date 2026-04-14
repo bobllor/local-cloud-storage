@@ -1,31 +1,26 @@
 package dbgateway
 
 import (
-	"io"
-	"log"
 	"testing"
 
 	"github.com/bobllor/assert"
-	"github.com/bobllor/cloud-project/src/config"
 	"github.com/bobllor/cloud-project/src/hasher"
+	"github.com/bobllor/cloud-project/src/tests"
 	"github.com/bobllor/cloud-project/src/user"
-	"github.com/bobllor/gologger"
+	"github.com/bobllor/cloud-project/src/utils"
 )
 
 const (
-	testUserName  = "test.username"
-	testPassword  = "anothertestpassword"
-	testPhcString = "$argon2id$v=19$m=65536,t=2,p=4$QTdpUkJ3c3J0amlOT2huV2VBR2duZw$vzICl8p5CVfpGfypDV4yIVULsYatAmir6B8nHWtcPtE"
+	testPassword = "anothertestpassword"
 )
 
 func TestGetUserID(t *testing.T) {
-	udb, err := newTestUserGateway()
+	udb := newTestUserGateway(t)
+
+	user, err := udb.GetUserByID(tests.DbRowInfo.AccountID)
 	assert.Nil(t, err)
 
-	user, err := udb.GetUserByID(testUserAccountID)
-	assert.Nil(t, err)
-
-	assert.Equal(t, user.AccountID, testUserAccountID)
+	assert.Equal(t, user.AccountID, tests.DbRowInfo.AccountID)
 	assert.True(t, user.Active)
 	assert.Equal(t, user.Username, "test.username")
 
@@ -34,63 +29,58 @@ func TestGetUserID(t *testing.T) {
 }
 
 func TestGetUserByUsername(t *testing.T) {
-	udb, err := newTestUserGateway()
+	ugw := newTestUserGateway(t)
+
+	user, err := ugw.GetUserByUsername(tests.DbRowInfo.Username)
 	assert.Nil(t, err)
 
-	user, err := udb.GetUserByUsername(testUserName)
-	assert.Nil(t, err)
-
-	assert.Equal(t, user.Username, testUserName)
-	assert.Equal(t, user.PasswordHash, testPhcString)
+	assert.Equal(t, user.Username, tests.DbRowInfo.Username)
+	assert.Equal(t, user.PasswordHash, tests.DbRowInfo.PhcString)
 }
 
 func TestCheckCredentials(t *testing.T) {
-	udb, err := newTestUserGateway()
-	assert.Nil(t, err)
+	ugw := newTestUserGateway(t)
 
-	status, err := udb.CheckCredentials(testUserName, testPassword)
+	status, err := ugw.ValidateUser(tests.DbRowInfo.Username, testPassword)
 	assert.Nil(t, err)
 
 	assert.True(t, status)
 }
 
 func TestCheckCredentialsInvalid(t *testing.T) {
-	udb, err := newTestUserGateway()
-	assert.Nil(t, err)
+	ugw := newTestUserGateway(t)
 
-	status, err := udb.CheckCredentials("userdoesnotexist", testPassword)
+	status, err := ugw.ValidateUser("userdoesnotexist", testPassword)
 	assert.NotNil(t, err)
 	assert.False(t, status)
 
-	status, err = udb.CheckCredentials(testUserName, "invalidpassword")
+	status, err = ugw.ValidateUser(tests.DbRowInfo.Username, "invalidpassword")
 	assert.Nil(t, err)
 	assert.False(t, status)
 }
 
 func TestAddUser(t *testing.T) {
-	udb, err := newTestUserGateway()
-	assert.Nil(t, err)
+	ugw := newTestUserGateway(t)
 	username := "a user here"
 	password := "somepasswordhere"
 
-	acc, err := udb.AddUser(username, password)
+	acc, err := ugw.AddUser(username, password)
 	assert.Nil(t, err)
 
-	_, err = DropRows(udb.database, user.TableName, user.ColumnAccountID, acc.AccountID)
+	_, err = DropRows(ugw.database, user.TableName, user.ColumnAccountID, acc.AccountID)
 	assert.Nil(t, err)
 }
 
 func TestAddUserComparePassword(t *testing.T) {
-	udb, err := newTestUserGateway()
-	assert.Nil(t, err)
+	ugw := newTestUserGateway(t)
 	username := "a user here"
 	password := "somepasswordhere"
 
-	acc, err := udb.AddUser(username, password)
+	acc, err := ugw.AddUser(username, password)
 	assert.Nil(t, err)
 
 	// drop row immediately in case of failures below, the rest doesnt need the table data
-	_, err = DropRows(udb.database, user.TableName, user.ColumnAccountID, acc.AccountID)
+	_, err = DropRows(ugw.database, user.TableName, user.ColumnAccountID, acc.AccountID)
 	assert.Nil(t, err)
 
 	baseRes, err := hasher.ParsePHC(acc.PasswordHash)
@@ -107,17 +97,39 @@ func TestAddUserComparePassword(t *testing.T) {
 	assert.Equal(t, compareRes.Hash, baseRes.Hash)
 }
 
-func newTestUserGateway() (*UserGateway, error) {
+func TestDeleteUser(t *testing.T) {
+	ugw := newTestUserGateway(t)
+
+	err := ugw.DeleteUserByID(tests.DbRowInfo.AccountID)
+	assert.Nil(t, err)
+
+	uInfo, err := ugw.GetUserByID(tests.DbRowInfo.AccountID)
+	assert.Nil(t, err)
+
+	_, err = UpdateRow(
+		ugw.database,
+		user.TableName,
+		user.ColumnAccountID,
+		tests.DbRowInfo.AccountID,
+		ClauseData{
+			Columns: []string{user.ColumnActive},
+			Args:    []any{true},
+		},
+	)
+
+	assert.Equal(t, uInfo.Active, false)
+	assert.NotEqual(t, uInfo.Active, tests.DbRowInfo.UserActive)
+
+}
+
+func newTestUserGateway(t *testing.T) *UserGateway {
 	cnf := newTestDBConfig()
 	db, err := NewDatabase(cnf)
-	if err != nil {
-		return nil, err
-	}
+	assert.Nil(t, err)
 
-	logger := gologger.NewLogger(log.New(io.Discard, "", log.Ldate|log.Ltime), gologger.Lsilent)
-	stdConfig := config.NewConfig(logger)
+	deps := utils.NewTestDeps()
 
-	ug := NewUserGateway(db, stdConfig)
+	ug := NewUserGateway(db, deps)
 
-	return ug, nil
+	return ug
 }

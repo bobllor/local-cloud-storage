@@ -34,7 +34,8 @@ func NewClauseBuilder() *ClauseBuilder {
 
 // BuildPlaceholder builds the placeholder string for parameters that are passed into
 // queries.
-// In the return string it does not include VALUES.
+// It will return the string base on the placeholder and repeat counts: "(?,?,...),(...)..."
+// This does not include VALUES.
 //
 // placholderCount is the amount of placeholders that are being used. This is expected
 // to be the number of parameters being used.

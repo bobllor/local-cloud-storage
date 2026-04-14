@@ -8,6 +8,54 @@ import (
 	"time"
 )
 
+type TestDbMeta struct {
+	User     string
+	Addr     string
+	Password string
+	Net      string
+	DbName   string
+}
+
+// DbMetaInfo is a read-only struct used to hold information
+// of the test database.
+var DbMetaInfo = TestDbMeta{
+	User:     "root",
+	Addr:     ":3307",
+	Password: "",
+	Net:      "tcp",
+	DbName:   "TestLocalCloudStorage",
+}
+
+type TestDbRow struct {
+	AccountID  string
+	Username   string
+	UserActive bool
+	PhcString  string
+	SessionID  string
+	FileID     string
+	FileName   string
+}
+
+// DbRowInfo is a read-only variable that contains the default values
+// included in the test database.
+var DbRowInfo = TestDbRow{
+	AccountID:  "89672a64-f3ff-490c-8f2d-7e5cf5d4aa70",
+	Username:   "test.username",
+	UserActive: true,
+	PhcString:  "$argon2id$v=19$m=65536,t=2,p=4$QTdpUkJ3c3J0amlOT2huV2VBR2duZw$vzICl8p5CVfpGfypDV4yIVULsYatAmir6B8nHWtcPtE",
+	SessionID:  "7ca90f85-b1e0-4214-8ff6-4e3720cc8078",
+	FileID:     "randomfileidhere",
+	FileName:   "test1.txt",
+}
+
+// TestPassword is the test password used to create the PhcString for
+// the default entry in the test database.
+var TestPassword = "anothertestpassword"
+
+// TestSalt is the salt used to salt the test password for the
+// default entry in the test database.
+var TestSalt = []byte("A7iRBwsrtjiNOhnWeAGgng")
+
 // CreateFiles creates random files in the root. It will return
 // a string slice containing the paths of the files created.
 //

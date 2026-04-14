@@ -5,26 +5,26 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/bobllor/cloud-project/src/config"
 	"github.com/bobllor/cloud-project/src/hasher"
 	"github.com/bobllor/cloud-project/src/user"
+	"github.com/bobllor/cloud-project/src/utils"
 	"github.com/google/uuid"
 )
 
 type UserGateway struct {
 	database       *sql.DB
 	userFieldCount int
-	config         *config.Config
+	deps           *utils.Deps
 	util           DBUtility
 }
 
-func NewUserGateway(db *sql.DB, config *config.Config) *UserGateway {
+func NewUserGateway(db *sql.DB, deps *utils.Deps) *UserGateway {
 	return &UserGateway{
 		database:       db,
 		userFieldCount: user.ColumnSize,
-		config:         config,
+		deps:           deps,
 		util: DBUtility{
-			log: config.Log,
+			log: deps.Log,
 		},
 	}
 }
@@ -69,11 +69,9 @@ func (ug *UserGateway) AddUser(username string, password string) (*user.UserAcco
 	return acc, err
 }
 
-// ConfirmUser confirms if the credentials are correct for the user. The username and
+// ValidateUser validates if the credentials are correct for the user. The username and
 // password is compared and will return a boolean or an error if one occurs.
-//
-// An error will be returned if the user does not exist in the database.
-func (ug *UserGateway) CheckCredentials(username string, password string) (bool, error) {
+func (ug *UserGateway) ValidateUser(username string, password string) (bool, error) {
 	user, err := ug.GetUserByUsername(username)
 	if err != nil {
 		return false, err
@@ -153,4 +151,44 @@ func (ug *UserGateway) GetUserByID(accountID string) (*user.UserAccount, error) 
 	}
 
 	return &user, nil
+}
+
+// DeleteUserByID sets an account ID for deletion. This is a soft deletion,
+// it sets the Active column to false for deletion at a later date.
+func (ug *UserGateway) DeleteUserByID(accountID string) error {
+	cb := NewClauseBuilder()
+	cb.Equal(user.ColumnAccountID, accountID)
+
+	cbq, args, err := cb.Build()
+	if err != nil {
+		return err
+	}
+
+	cd := NewClauseData()
+
+	cd.AddColumns(user.ColumnActive)
+	cd.AddArgs(false)
+
+	sq, sargs, err := cd.BuildSetQuery()
+	if err != nil {
+		return err
+	}
+
+	baseQuery := fmt.Sprintf("UPDATE %s %s %s", user.TableName, sq, cbq)
+
+	execArgs := MakeArgs(sargs, args)
+
+	res, err := execQuery(ug.database, baseQuery, execArgs...)
+	if err != nil {
+		return err
+	}
+
+	ug.util.LogResultRows(res)
+
+	return nil
+}
+
+// RestoreUserByID removes the soft deletion state from the account ID.
+func (ug *UserGateway) RestoreUserByID(accountID string) error {
+	return nil
 }

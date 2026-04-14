@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/bobllor/assert"
-	"github.com/bobllor/cloud-project/src/config"
+	"github.com/bobllor/cloud-project/src/utils"
 	"github.com/bobllor/gologger"
 )
 
@@ -85,9 +85,9 @@ func TestFailWriteNoData(t *testing.T) {
 func newTestDiskWriter(chunkSize int) *DiskWriter {
 	logger := gologger.NewLogger(log.New(os.Stdout, "", log.Ldate|log.Ltime), gologger.Lsilent)
 
-	config := config.NewConfig(logger)
+	deps := utils.NewDeps(logger)
 
-	dw := NewDiskWriter(chunkSize, config)
+	dw := NewDiskWriter(chunkSize, deps)
 
 	return dw
 }

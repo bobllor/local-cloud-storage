@@ -55,7 +55,8 @@ func SelectRow(rows *sql.Rows, src interface{}) error {
 }
 
 // SelectRows iterates over rows to fill a given source slice of any type.
-// src must be a pointer to a slice.
+// src must be a pointer to a slice and the type must not be a pointer.
+// If these are false then it will panic.
 //
 // The columns length found in rows must be equal to the number of fields given
 // in src, and the order of the columns must match the order of the type in src.
@@ -74,7 +75,7 @@ func SelectRows(rows *sql.Rows, src interface{}) error {
 	}
 
 	// the type of the slice, ptr slice any -> slice any -> any
-	t := reflect.TypeOf(src).Elem().Elem()
+	t := getType(reflect.TypeOf(src))
 	ve := v.Elem()
 
 	if t.NumField() != len(columns) {
@@ -108,7 +109,7 @@ func UpdateRow(db *sql.DB, table string, whereColumn string, whereArg any, claus
 	cb := NewClauseBuilder()
 	cb.In(whereColumn, whereArg)
 
-	clQ, err := clause.BuildSetQuery()
+	clQ, sargs, err := clause.BuildSetQuery()
 	if err != nil {
 		return nil, err
 	}
@@ -120,14 +121,11 @@ func UpdateRow(db *sql.DB, table string, whereColumn string, whereArg any, claus
 		return nil, err
 	}
 
-	finalArgs := []any{}
-
-	finalArgs = append(finalArgs, clause.Args...)
-	finalArgs = append(finalArgs, args...)
+	execArgs := MakeArgs(sargs, args)
 
 	query := baseQ + " " + cbQ
 
-	res, err := execQuery(db, query, finalArgs...)
+	res, err := execQuery(db, query, execArgs...)
 	if err != nil {
 		return nil, err
 	}
@@ -176,6 +174,73 @@ func getScannableValues(size int, v reflect.Value) []any {
 	}
 
 	return values
+}
+
+// getValue is a recursive call that takes v and will return
+// the first occurrence of a non-pointer v.
+// If v is a pointer, it will dereference it until it is not a pointer.
+func getValue(v reflect.Value) reflect.Value {
+	if v.Kind() != reflect.Pointer {
+		return v
+	}
+
+	return getValue(v.Elem())
+}
+
+// getType is a recursive call that takes t and will return
+// the first occurrence of a non-pointer t.
+// If t is a pointer, it will dereference it until it is not a pointer.
+//
+// Slices are ignored with getType.
+func getType(t reflect.Type) reflect.Type {
+	if t.Kind() != reflect.Pointer && t.Kind() != reflect.Slice {
+		return t
+	}
+
+	return getType(t.Elem())
+}
+
+// AppendArgs appends to s []any of any arguments.
+//
+// This is used to build onto an existing []any for
+// query args.
+func AppendArgs(s *[]any, arg ...any) {
+	for _, v := range arg {
+		*s = append(*s, v)
+	}
+}
+
+// MakeArgs creates a new any slice from any given arguments.
+func MakeArgs(args ...any) []any {
+	out := []any{}
+
+	for _, a := range args {
+		av := reflect.ValueOf(a)
+		v := getReflectValue(av)
+
+		if v.Kind() != reflect.Slice {
+			out = append(out, a)
+		} else {
+			for i := 0; i < v.Len(); i++ {
+				vv := v.Index(i)
+				out = append(out, vv.Interface())
+			}
+		}
+	}
+
+	return out
+}
+
+// getReflectValue is a recursive call that retrieves the underlying value
+// of v.
+//
+// If v is not a pointer, then it will return v.
+func getReflectValue(v reflect.Value) reflect.Value {
+	if v.Kind() != reflect.Pointer {
+		return v
+	}
+
+	return getReflectValue(v.Elem())
 }
 
 // DBUtility is a utility struct for database related operations.

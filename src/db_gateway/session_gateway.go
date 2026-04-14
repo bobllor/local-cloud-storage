@@ -3,33 +3,39 @@ package dbgateway
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
-	"github.com/bobllor/cloud-project/src/config"
 	"github.com/bobllor/cloud-project/src/session"
+	"github.com/bobllor/cloud-project/src/utils"
 	"github.com/google/uuid"
 )
 
-func NewSessionGateway(db *sql.DB, cfg *config.Config) (*SessionGateway, error) {
+const (
+	ExpireTimeDays = 14
+)
+
+func NewSessionGateway(db *sql.DB, deps *utils.Deps) *SessionGateway {
 	sg := &SessionGateway{
 		database:          db,
 		sessionFieldCount: session.ColumnSize,
-		cfg:               cfg,
-		util:              DBUtility{log: cfg.Log},
+		deps:              deps,
+		util:              DBUtility{log: deps.Log},
 	}
 
-	return sg, nil
+	return sg
 }
 
 type SessionGateway struct {
 	database          *sql.DB
 	sessionFieldCount int
-	cfg               *config.Config
+	deps              *utils.Deps
 	util              DBUtility
 }
 
-// GetSession retrieves the session of the account ID.
-func (sg *SessionGateway) GetSession(accountID string) (*session.Session, error) {
+// GetSessionByAccountID retrieves the session of the account ID. If a session is not found,
+// then it will return nil.
+func (sg *SessionGateway) GetSessionByAccountID(accountID string) (*session.Session, error) {
 	cb := NewClauseBuilder()
 
 	cb.Equal(session.ColumnAccountID, accountID)
@@ -41,7 +47,7 @@ func (sg *SessionGateway) GetSession(accountID string) (*session.Session, error)
 
 	baseQ := fmt.Sprintf("SELECT * FROM %s", session.TableName)
 
-	accSession := &session.Session{}
+	accSession := []session.Session{}
 
 	query := baseQ + " " + cbQ
 
@@ -50,18 +56,54 @@ func (sg *SessionGateway) GetSession(accountID string) (*session.Session, error)
 		return nil, err
 	}
 
-	err = SelectRow(rows, accSession)
+	err = SelectRows(rows, &accSession)
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO: handle an edge case where no users appear,
-	// this applies to other functions similar to this as well
+	if len(accSession) == 0 {
+		return nil, nil
+	}
 
-	return accSession, nil
+	return &accSession[0], nil
 }
 
-// UpsertSession adds a new or updates an existing entry for the Session table, ]
+// GetSessionBySessionID retrieves the session by session ID. If a session is not found,
+// then it will return nil.
+func (sg *SessionGateway) GetSessionBySessionID(sessionID string) (*session.Session, error) {
+	if !sg.validateID(sessionID) {
+		return nil, nil
+	}
+
+	cb := NewClauseBuilder()
+	cb.Equal(session.ColumnSessionID, sessionID)
+
+	cbq, args, err := cb.Build()
+	if err != nil {
+		return nil, err
+	}
+
+	query := fmt.Sprintf("SELECT * FROM %s %s", session.TableName, cbq)
+
+	rows, err := sg.database.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	var ses []session.Session
+	err = SelectRows(rows, &ses)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(ses) == 0 {
+		return nil, nil
+	}
+
+	return &ses[0], nil
+}
+
+// UpsertSession adds a new or updates an existing entry for the Session table,
 // generating a new session ID associated with the account ID to maintain a session.
 // It will return the Session that was added if successful.
 //
@@ -71,9 +113,8 @@ func (sg *SessionGateway) UpsertSession(accountID string) (*session.Session, err
 	sessionID := uuid.NewString()
 	query := fmt.Sprintf("INSERT INTO %s", session.TableName)
 
-	// expiration date is 30 days from the current time
 	currTime := time.Now().UTC()
-	expireTime := currTime.AddDate(0, 0, 30)
+	expireTime := currTime.AddDate(0, 0, ExpireTimeDays)
 	ses := session.Session{
 		SessionID: sessionID,
 		AccountID: accountID,
@@ -87,21 +128,68 @@ func (sg *SessionGateway) UpsertSession(accountID string) (*session.Session, err
 
 	duplicateStr := fmt.Sprintf(
 		"ON DUPLICATE KEY UPDATE %s=?,%s=?,%s=?",
-		session.ColumnColumnSessionID,
+		session.ColumnSessionID,
 		session.ColumnCreatedOn,
 		session.ColumnExpireOn,
 	)
 
-	args = append(args, sessionID)
-	args = append(args, currTime)
-	args = append(args, expireTime)
+	AppendArgs(&args, sessionID, currTime, expireTime)
 
 	query = query + " " + "VALUES" + placeholder + " " + duplicateStr
 
 	_, err := execQuery(sg.database, query, args...)
 	if err != nil {
+		sg.deps.Log.Warnf("Failed to execute query: %s | Values: %v", query, args)
 		return nil, err
 	}
 
 	return &ses, nil
+}
+
+// ValidateSession validates a session with the user's session ID and account ID.
+// If the sessionID is invalid, it does not exist, or it does not match the stored database
+// version, then it will return false.
+//
+// Any errors will be returned.
+func (sg *SessionGateway) ValidateSession(accountID string, sessionID string) (bool, error) {
+	// false conditions:
+	//	- any DB errors (error must be handled)
+	//	- sessionID/accountID are empty strings or invalid formatting
+	//	- sessionID does not match stored sessionID
+	//	- stored expiration date is < current time
+	//	- session row is not found with account ID
+
+	if !sg.validateID(sessionID) || !sg.validateID(accountID) {
+		return false, nil
+	}
+
+	// TODO: add cache access here, probably redis or if you are lazy a hash map
+
+	ses, err := sg.GetSessionByAccountID(accountID)
+	if err != nil {
+		return false, err
+	}
+	if ses == nil {
+		return false, nil
+	}
+
+	if ses.SessionID != sessionID {
+		return false, nil
+	}
+	if ses.ExpireOn.UTC().Before(time.Now().UTC()) {
+		return false, nil
+	}
+
+	return true, nil
+}
+
+// validateID validates the ID string formatting. It returns a true
+// if it is valid, otherwise it will return false.
+// This does not check the database.
+func (sg *SessionGateway) validateID(id string) bool {
+	if strings.TrimSpace(id) == "" {
+		return false
+	}
+
+	return true
 }

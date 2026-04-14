@@ -1,17 +1,13 @@
 package dbgateway
 
 import (
-	"io"
-	"log"
 	"testing"
 	"time"
 
 	"github.com/bobllor/assert"
-	"github.com/bobllor/cloud-project/src/config"
 	"github.com/bobllor/cloud-project/src/file"
 	"github.com/bobllor/cloud-project/src/tests"
 	"github.com/bobllor/cloud-project/src/utils"
-	"github.com/bobllor/gologger"
 )
 
 // IMPORTANT: These tests require the test database to exist.
@@ -23,18 +19,11 @@ import (
 // Majority of the tests with modifications only affects the default rows.
 // Be aware of it!
 
-// Constant variables that are the column data of the first (and by default) entries in the test DB.
-const (
-	testUserAccountID   = "89672a64-f3ff-490c-8f2d-7e5cf5d4aa70"
-	testFileID          = "randomfileidhere"
-	testDefaultFileName = "test1.txt"
-)
-
 func TestGetAllFiles(t *testing.T) {
 	fDb, err := getTestFileGateway()
 	assert.Nil(t, err)
 
-	files, err := fDb.GetAllFiles(testUserAccountID)
+	files, err := fDb.GetAllFiles(tests.DbRowInfo.AccountID)
 	assert.Nil(t, err)
 
 	assert.NotEqual(t, len(files), 0)
@@ -47,13 +36,13 @@ func TestGetFile(t *testing.T) {
 	conditions := []WhereCondition{
 		{
 			Column:             file.ColumnFileID,
-			Args:               []any{testFileID},
+			Args:               []any{tests.DbRowInfo.FileID},
 			LogicalOperator:    OperatorAnd,
 			ComparisonOperator: Equal,
 		},
 	}
 
-	qFiles, err := fDb.GetFiles(testUserAccountID, conditions)
+	qFiles, err := fDb.GetFiles(tests.DbRowInfo.AccountID, conditions)
 	assert.Nil(t, err)
 
 	assert.Equal(t, len(qFiles), 1)
@@ -74,7 +63,7 @@ func TestAddFile(t *testing.T) {
 	fileIDs := []string{}
 	// File.OwnerID is nil, this is changed to the existing account ID by default.
 	for i := range files {
-		files[i].OwnerID = testUserAccountID
+		files[i].OwnerID = tests.DbRowInfo.AccountID
 
 		fileIDs = append(fileIDs, files[i].FileID)
 	}
@@ -82,7 +71,7 @@ func TestAddFile(t *testing.T) {
 	err = fDb.AddFile(files)
 	assert.Nil(t, err)
 
-	qFiles, err := fDb.GetAllFiles(testUserAccountID)
+	qFiles, err := fDb.GetAllFiles(tests.DbRowInfo.AccountID)
 	assert.Nil(t, err)
 
 	// only 1 row exists by default, afterwards it adds however many from files
@@ -104,15 +93,15 @@ func TestUpdateFileByID(t *testing.T) {
 		Args:    []any{newValue},
 	}
 
-	err = fDb.UpdateFileByID(testUserAccountID, testFileID, cd)
+	err = fDb.UpdateFileByID(tests.DbRowInfo.AccountID, tests.DbRowInfo.FileID, cd)
 	assert.Nil(t, err)
 
-	files, err := fDb.GetFiles(testUserAccountID, getConditionByID(testFileID))
+	files, err := fDb.GetFiles(tests.DbRowInfo.AccountID, getConditionByID(tests.DbRowInfo.FileID))
 	assert.Nil(t, err)
 
 	assert.Equal(t, files[0].Name, newValue)
 
-	err = resetDefaultFileRow(fDb, file.ColumnFileName, testDefaultFileName)
+	err = resetDefaultFileRow(fDb, file.ColumnFileName, tests.DbRowInfo.FileName)
 	assert.Nil(t, err)
 }
 
@@ -120,23 +109,23 @@ func TestDeleteFiles(t *testing.T) {
 	fDb, err := getTestFileGateway()
 	assert.Nil(t, err)
 
-	err = fDb.DeleteFiles(testUserAccountID, []string{testFileID})
+	err = fDb.DeleteFiles(tests.DbRowInfo.AccountID, []string{tests.DbRowInfo.FileID})
 	assert.Nil(t, err)
 
 	conditions := []WhereCondition{
 		{
 			Column:             file.ColumnFileID,
-			Args:               []any{testFileID},
+			Args:               []any{tests.DbRowInfo.FileID},
 			LogicalOperator:    OperatorAnd,
 			ComparisonOperator: Equal,
 		},
 	}
 
-	qFiles, err := fDb.GetFiles(testUserAccountID, conditions)
+	qFiles, err := fDb.GetFiles(tests.DbRowInfo.AccountID, conditions)
 	assert.Nil(t, err)
 
 	assert.NotNil(t, qFiles[0].DeletedOn)
-	assert.Equal(t, qFiles[0].FileID, testFileID)
+	assert.Equal(t, qFiles[0].FileID, tests.DbRowInfo.FileID)
 
 	now := time.Now()
 	qDate := qFiles[0].DeletedOn
@@ -156,26 +145,26 @@ func TestRestoreFiles(t *testing.T) {
 	conditions := []WhereCondition{
 		{
 			Column:             file.ColumnFileID,
-			Args:               []any{testFileID},
+			Args:               []any{tests.DbRowInfo.FileID},
 			LogicalOperator:    OperatorAnd,
 			ComparisonOperator: Equal,
 		},
 	}
 
-	err = fDb.DeleteFiles(testUserAccountID, []string{testFileID})
+	err = fDb.DeleteFiles(tests.DbRowInfo.AccountID, []string{tests.DbRowInfo.FileID})
 	assert.Nil(t, err)
 
-	qFiles, err := fDb.GetFiles(testUserAccountID, conditions)
+	qFiles, err := fDb.GetFiles(tests.DbRowInfo.AccountID, conditions)
 	assert.Nil(t, err)
 
 	if qFiles[0].DeletedOn == nil {
 		t.Fatal("failed to set file to deleted with DeletedOn")
 	}
 
-	err = fDb.RestoreFiles(testUserAccountID, []string{testFileID})
+	err = fDb.RestoreFiles(tests.DbRowInfo.AccountID, []string{tests.DbRowInfo.FileID})
 	assert.Nil(t, err)
 
-	qFiles, err = fDb.GetFiles(testUserAccountID, conditions)
+	qFiles, err = fDb.GetFiles(tests.DbRowInfo.AccountID, conditions)
 	assert.Nil(t, err)
 
 	assert.Nil(t, qFiles[0].DeletedOn)
@@ -188,21 +177,21 @@ func TestUpdateModifiedFile(t *testing.T) {
 	conditions := []WhereCondition{
 		{
 			Column:             file.ColumnFileID,
-			Args:               []any{testFileID},
+			Args:               []any{tests.DbRowInfo.FileID},
 			LogicalOperator:    OperatorAnd,
 			ComparisonOperator: Equal,
 		},
 	}
 
-	baseFiles, err := fDb.GetFiles(testUserAccountID, conditions)
+	baseFiles, err := fDb.GetFiles(tests.DbRowInfo.AccountID, conditions)
 	assert.Nil(t, err)
 
 	baseDate := baseFiles[0].ModifiedOn
 
-	err = fDb.UpdateModifiedFiles(testUserAccountID, []string{testFileID})
+	err = fDb.UpdateModifiedFiles(tests.DbRowInfo.AccountID, []string{tests.DbRowInfo.FileID})
 	assert.Nil(t, err)
 
-	newFiles, err := fDb.GetFiles(testUserAccountID, conditions)
+	newFiles, err := fDb.GetFiles(tests.DbRowInfo.AccountID, conditions)
 	assert.Nil(t, err)
 
 	newDate := newFiles[0].ModifiedOn
@@ -218,8 +207,8 @@ func TestAddDuplicateFileError(t *testing.T) {
 	assert.Nil(t, err)
 
 	f := file.File{
-		OwnerID: testUserAccountID,
-		FileID:  testFileID,
+		OwnerID: tests.DbRowInfo.AccountID,
+		FileID:  tests.DbRowInfo.FileID,
 	}
 
 	err = fDb.AddFile([]file.File{f})
@@ -252,27 +241,27 @@ func TestUpdateFiles(t *testing.T) {
 	conditions := []WhereCondition{
 		{
 			Column:             file.ColumnFileID,
-			Args:               []any{testFileID},
+			Args:               []any{tests.DbRowInfo.FileID},
 			ComparisonOperator: Equal,
 			LogicalOperator:    OperatorAnd,
 		},
 	}
 
-	files, err := fDb.GetFiles(testUserAccountID, conditions)
+	files, err := fDb.GetFiles(tests.DbRowInfo.AccountID, conditions)
 	assert.Nil(t, err)
 
 	baseName := files[0].Name
 
-	err = fDb.UpdateFiles(testUserAccountID, cd, conditions)
+	err = fDb.UpdateFiles(tests.DbRowInfo.AccountID, cd, conditions)
 	assert.Nil(t, err)
 
-	files, err = fDb.GetFiles(testUserAccountID, conditions)
+	files, err = fDb.GetFiles(tests.DbRowInfo.AccountID, conditions)
 	assert.Nil(t, err)
 
 	assert.Equal(t, files[0].Name, newName)
 	assert.NotEqual(t, files[0].Name, baseName)
 
-	err = resetDefaultFileRow(fDb, file.ColumnFileName, testDefaultFileName)
+	err = resetDefaultFileRow(fDb, file.ColumnFileName, tests.DbRowInfo.FileName)
 	assert.Nil(t, err)
 }
 
@@ -287,10 +276,9 @@ func getTestFileGateway() (*FileGateway, error) {
 		return nil, err
 	}
 
-	logger := gologger.NewLogger(log.New(io.Discard, "", log.Ldate|log.Ltime), gologger.Lsilent)
-	stdConfig := config.NewConfig(logger)
+	deps := utils.NewTestDeps()
 
-	fDb := NewFileGateway(db, stdConfig)
+	fDb := NewFileGateway(db, deps)
 
 	return fDb, nil
 }
@@ -320,7 +308,7 @@ func getClauseData(column string, args ...any) ClauseData {
 func resetDefaultFileRow(fDb *FileGateway, column string, args ...any) error {
 	cd := getClauseData(column, args...)
 
-	err := fDb.UpdateFileByID(testUserAccountID, testFileID, cd)
+	err := fDb.UpdateFileByID(tests.DbRowInfo.AccountID, tests.DbRowInfo.FileID, cd)
 	if err != nil {
 		return err
 	}
