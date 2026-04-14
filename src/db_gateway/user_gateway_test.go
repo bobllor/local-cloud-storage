@@ -41,7 +41,7 @@ func TestGetUserByUsername(t *testing.T) {
 func TestCheckCredentials(t *testing.T) {
 	ugw := newTestUserGateway(t)
 
-	status, err := ugw.CheckCredentials(tests.DbRowInfo.Username, testPassword)
+	status, err := ugw.ValidateUser(tests.DbRowInfo.Username, testPassword)
 	assert.Nil(t, err)
 
 	assert.True(t, status)
@@ -50,11 +50,11 @@ func TestCheckCredentials(t *testing.T) {
 func TestCheckCredentialsInvalid(t *testing.T) {
 	ugw := newTestUserGateway(t)
 
-	status, err := ugw.CheckCredentials("userdoesnotexist", testPassword)
+	status, err := ugw.ValidateUser("userdoesnotexist", testPassword)
 	assert.NotNil(t, err)
 	assert.False(t, status)
 
-	status, err = ugw.CheckCredentials(tests.DbRowInfo.Username, "invalidpassword")
+	status, err = ugw.ValidateUser(tests.DbRowInfo.Username, "invalidpassword")
 	assert.Nil(t, err)
 	assert.False(t, status)
 }
