@@ -1,11 +1,14 @@
 package tests
 
 import (
+	"log"
 	"math/rand"
 	"os"
 	"path"
 	"path/filepath"
 	"time"
+
+	"github.com/bobllor/gologger"
 )
 
 type TestDbMeta struct {
@@ -55,6 +58,14 @@ var TestPassword = "anothertestpassword"
 // TestSalt is the salt used to salt the test password for the
 // default entry in the test database.
 var TestSalt = []byte("A7iRBwsrtjiNOhnWeAGgng")
+
+// NewTestLogger creates a new test logger with a silent output.
+func NewTestLogger() *gologger.Logger {
+	printer := log.New(os.Stdout, "", log.Ldate|log.Ltime)
+	log := gologger.NewLogger(printer, gologger.Lsilent)
+
+	return log
+}
 
 // CreateFiles creates random files in the root. It will return
 // a string slice containing the paths of the files created.
