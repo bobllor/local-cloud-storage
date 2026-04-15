@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"net/http"
 
 	dbcon "github.com/bobllor/cloud-project/src/db_gateway"
@@ -11,40 +12,54 @@ const (
 	ContentJson = "application/json"
 )
 
-// NewApi creates a new Api struct.
-func NewApi(gw *dbcon.Gateway, logger *gologger.Logger) *Api {
-	api := &Api{
-		User: NewUserHandler(gw, logger),
+const (
+	CookieSessionKey = "lcsSessionID"
+)
+
+type ApiHandler struct {
+	UserHandler *UserHandler
+	gateway     *dbcon.Gateway
+}
+
+// NewApiHandler creates a new Api struct.
+func NewApiHandler(gw *dbcon.Gateway, logger *gologger.Logger) *ApiHandler {
+	api := &ApiHandler{
+		UserHandler: NewUserHandler(gw, logger),
+		gateway:     gw,
 	}
 
 	return api
 }
 
-type Api struct {
-	User     *UserHandler
-	Handlers HandlerMap
-}
+// CreateAuthHandler creates a new handler from a given handler function, wrapped in an
+// authentication-based closure.
+func (ah *ApiHandler) CreateAuthHandler(f func(http.ResponseWriter, *http.Request)) http.Handler {
+	next := http.HandlerFunc(f)
 
-// GetHandlers
-func (a *Api) GetHandlers() HandlerMap {
-	return a.Handlers
-}
+	// TODO: add logging
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		sessionCookie, err := r.Cookie(CookieSessionKey)
+		WriteHeaders(w, r)
+		if err != nil {
+			newErr := errors.New("unauthorized")
+			WriteErrorResponse(w, newErr, http.StatusUnauthorized)
 
-// addUserHandlers is used to add the HandlerFunc with a route, used for the HandlerMap.
-// This function will panic if a duplicate handler is added.
-func (a *Api) addUserHandlers() {
-	u := a.User
+			return
+		}
 
-	a.addHandler(UserPostRegisterRoute, u.Post.RegisterUser)
-}
+		validSession, err := ah.gateway.Session.ValidateSession(sessionCookie.Value)
+		if err != nil {
+			WriteErrorResponse(w, err, http.StatusInternalServerError)
+			return
+		}
 
-// addHandler adds a handler to a.HandlerMap. If a duplicate route is found, then this method
-// will panic.
-func (a *Api) addHandler(route string, handleFunc func(w http.ResponseWriter, r *http.Request)) {
-	_, ok := a.Handlers[route]
-	if !ok {
-		a.Handlers[route] = handleFunc
-	} else {
-		panic("duplicate route found")
-	}
+		if !validSession {
+			sessionErr := errors.New("session ID is invalid")
+			WriteErrorResponse(w, sessionErr, http.StatusUnauthorized)
+
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }

@@ -43,3 +43,11 @@ func WriteResponse(w http.ResponseWriter, v any) error {
 
 	return nil
 }
+
+// WriteHeaders writes the headers for CORS.
+func WriteHeaders(w http.ResponseWriter, r *http.Request) {
+	origin := r.Header.Get("Origin")
+	w.Header().Set("Access-Control-Allow-Origin", origin)
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Add("Vary", "Origin")
+}

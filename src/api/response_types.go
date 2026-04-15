@@ -1,5 +1,10 @@
 package api
 
+const (
+	StatusSuccess StatusType = "success"
+	StatusError              = "error"
+)
+
 // StatusType is the status of the response.
 type StatusType string
 
@@ -10,11 +15,6 @@ type Error struct {
 	// Message is the reason why the error had occurred.
 	Message string `json:"message"`
 }
-
-const (
-	StatusSuccess StatusType = "success"
-	StatusError              = "error"
-)
 
 // ApiResponse is the response streamed to the client from the server.
 // This is the standardized response for the backend system for all handlers.
@@ -30,9 +30,7 @@ type ApiResponse struct {
 	Error *Error `json:"error,omitempty"`
 }
 
-// NewApiResponse creates a new "success" API response by default.
-//
-// output is any output type that is added to the output of the response.
+// NewApiResponse creates a new success API response for successful requests.
 func NewApiResponse(output any) *ApiResponse {
 	res := &ApiResponse{
 		Status: StatusSuccess,
