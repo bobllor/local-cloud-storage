@@ -2,7 +2,7 @@ package api
 
 const (
 	StatusSuccess StatusType = "success"
-	StatusError              = "error"
+	StatusError   StatusType = "error"
 )
 
 // StatusType is the status of the response.
