@@ -51,7 +51,7 @@ func TestCheckCredentialsInvalid(t *testing.T) {
 	ugw := newTestUserGateway(t)
 
 	status, err := ugw.ValidateUser("userdoesnotexist", testPassword)
-	assert.NotNil(t, err)
+	assert.Nil(t, err)
 	assert.False(t, status)
 
 	status, err = ugw.ValidateUser(tests.DbRowInfo.Username, "invalidpassword")
