@@ -20,8 +20,8 @@ func TestPostRegisterUser(t *testing.T) {
 	sv := getTestServer(t)
 	gw, db := getGatewayDb(t)
 
-	uh := NewUserHandler(gw)
-	sv.RegisterHandler(UserRegisterRoute, uh.Post.RegisterUser)
+	uh := NewUserHandler(gw, tests.NewTestLogger())
+	sv.RegisterHandler(UserPostRegisterRoute, uh.Post.RegisterUser)
 
 	mSv := httptest.NewServer(sv.Handler)
 	defer mSv.Close()
