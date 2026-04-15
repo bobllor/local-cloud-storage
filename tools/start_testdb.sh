@@ -11,6 +11,10 @@ declare -i max_attempts=7
 if [[ "$container_status" == "false" ]]; then
     echo "Starting container $c_name"
 
+    if [[ ! -z $(docker container ls -a | grep "$c_name") ]]; then
+        echo "Found existing container $c_name: removing..."
+        stop_docker_container "$c_name"
+    fi
     # volume will also share the container name
     docker volume create "$c_name" | xargs -I x echo "Created test volume x"
 
