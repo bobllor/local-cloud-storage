@@ -38,6 +38,9 @@ export default function Login(): JSX.Element{
                     <NavLink to="/register" className="h-8 border-2 w-[40%] flex items-center justify-center">
                         Register
                     </NavLink>
+                    <NavLink to="/" className="h-8 border-2 w-[40%] flex items-center justify-center">
+                        Home
+                    </NavLink>
                 </form>
             </div>
         </>
@@ -63,12 +66,13 @@ async function login(formEvent: React.SubmitEvent<HTMLFormElement>): Promise<boo
         }
     })
 
-    const res: Response = await fetch(createUrl("/login"), {
+    fetch(createUrl("/login"), {
         method: "POST",
         body: JSON.stringify(userData),
-    })
-
-    console.log(res.body);
+    }).then(res => {
+        console.log(res);
+        res.json().then(val => console.log(val))
+    });
 
     return false
 }
