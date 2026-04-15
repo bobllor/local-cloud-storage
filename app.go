@@ -81,6 +81,6 @@ func main() {
 	serv.RegisterHandler(api.UserPostRegisterRoute, ap.User.Post.RegisterUser)
 	serv.RegisterHandler(api.UserPostLoginRoute, ap.User.Post.Login)
 
-	logger.Info("Server started")
 	log.Fatal(serv.Start())
+	logger.Info("Server started")
 }
