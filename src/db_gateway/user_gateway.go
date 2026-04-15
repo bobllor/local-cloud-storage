@@ -76,6 +76,9 @@ func (ug *UserGateway) ValidateUser(username string, password string) (bool, err
 	if err != nil {
 		return false, err
 	}
+	if user == nil {
+		return false, nil
+	}
 
 	storedHash, err := hasher.ParsePHC(user.PasswordHash)
 	if err != nil {
@@ -91,8 +94,6 @@ func (ug *UserGateway) ValidateUser(username string, password string) (bool, err
 }
 
 // GetUserByUsername gets the user row based on the username.
-// If the username does not exist in the database, an error will be returned,
-// otherwise standard errors will occur.
 func (ug *UserGateway) GetUserByUsername(username string) (*user.UserAccount, error) {
 	cb := NewClauseBuilder()
 	cb.Equal(user.ColumnUsername, username)
@@ -119,7 +120,8 @@ func (ug *UserGateway) GetUserByUsername(username string) (*user.UserAccount, er
 	}
 
 	if len(users) == 0 {
-		return nil, fmt.Errorf("username %s does not exist in database", username)
+		ug.deps.Log.Infof("user %s has no entries", username)
+		return nil, nil
 	}
 
 	return &users[0], nil
