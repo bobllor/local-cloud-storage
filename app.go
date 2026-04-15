@@ -23,11 +23,6 @@ func main() {
 	// TODO: add real logging for prod
 	logger := gologger.NewLogger(log.New(os.Stdout, "", log.Ltime|log.Ldate), gologger.Lsilent)
 
-	serv, err := server.NewServer(scfg.ServerAddress)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	err = scfg.LoadEnv()
 	if err != nil {
 		log.Fatal(err)
@@ -76,11 +71,15 @@ func main() {
 		Session: sg,
 	}
 
-	ap := api.NewApi(gw, logger)
+	ap := api.NewApiHandler(gw, logger)
+	serv, err := server.NewServer(scfg.ServerAddress)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	serv.RegisterHandler(api.UserPostRegisterRoute, ap.User.Post.RegisterUser)
-	serv.RegisterHandler(api.UserPostLoginRoute, ap.User.Post.Login)
+	serv.RegisterHandlerFunc(api.UserPostRegisterRoute, ap.UserHandler.Post.RegisterUser)
+	serv.RegisterHandlerFunc(api.UserPostLoginRoute, ap.UserHandler.Post.Login)
 
+	logger.Info("Starting server")
 	log.Fatal(serv.Start())
-	logger.Info("Server started")
 }
