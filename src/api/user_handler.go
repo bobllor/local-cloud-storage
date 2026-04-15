@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	dbcon "github.com/bobllor/cloud-project/src/db_gateway"
@@ -12,10 +13,6 @@ import (
 const (
 	UserPostRegisterRoute = "POST /register"
 	UserPostLoginRoute    = "POST /login"
-)
-
-const (
-	CookieSessionKey = "LCSSessionID"
 )
 
 // TODO: add string checker for empty/invalid characters (username/password)
@@ -54,15 +51,16 @@ type PostUserHandler struct {
 	deps    *utils.Deps
 }
 
-// LoginUser is the handler for handling the login and authentication.
+// Login is the handler for handling the login and authentication.
+// The username and password will be validated if the cookie is not found
+// with a valid session ID.
 //
-// There are two authentication attempts:
-//  1. A valid session ID is found in the cookie and validated
-//  2. If there is no cookie, then the username and password will be validated
+// The middleware does not effect this, but the session ID is to prevent reauth.
 //
 // If the user is successfully authenticated, the output of the response
 // will contain the status and the session ID will be written to the cookie.
 func (pu *PostUserHandler) Login(w http.ResponseWriter, r *http.Request) {
+	pu.deps.Log.Infof("Login handler accessed (%v)", r.RemoteAddr)
 	var user RequestUserInfo
 
 	c, err := r.Cookie(CookieSessionKey)
@@ -94,20 +92,22 @@ func (pu *PostUserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	validUser, err := pu.Gateway.User.ValidateUser(user.Username, user.Password)
 	if err != nil {
 		pu.deps.Log.Criticalf("Error occurred during user validation: %v", err)
-		WriteErrorResponse(w, err, http.StatusBadRequest)
+		WriteErrorResponse(w, err, http.StatusInternalServerError)
+		return
 	}
 
-	pu.deps.Log.Debugf("Validate user result: %v", validUser)
+	pu.deps.Log.Debugf("%s result: %v", user.Username, validUser)
 
 	res := NewApiResponse(validUser)
 	if validUser {
 		// TODO: set cookies here
-	}
-
-	err = WriteResponse(w, res)
-	if err != nil {
-		WriteErrorResponse(w, err, http.StatusInternalServerError)
-		return
+		err = WriteResponse(w, res)
+		if err != nil {
+			WriteErrorResponse(w, err, http.StatusInternalServerError)
+		}
+	} else {
+		err = fmt.Errorf("user %s does not exist", user.Username)
+		WriteErrorResponse(w, err, http.StatusBadRequest)
 	}
 }
 
