@@ -146,26 +146,26 @@ func (sg *SessionGateway) UpsertSession(accountID string) (*session.Session, err
 	return &ses, nil
 }
 
-// ValidateSession validates a session with the user's session ID and account ID.
+// ValidateSession validates a session with the user's session ID.
 // If the sessionID is invalid, it does not exist, or it does not match the stored database
 // version, then it will return false.
 //
 // Any errors will be returned.
-func (sg *SessionGateway) ValidateSession(accountID string, sessionID string) (bool, error) {
+func (sg *SessionGateway) ValidateSession(sessionID string) (bool, error) {
 	// false conditions:
 	//	- any DB errors (error must be handled)
-	//	- sessionID/accountID are empty strings or invalid formatting
+	//	- sessionID are empty strings or invalid formatting
 	//	- sessionID does not match stored sessionID
 	//	- stored expiration date is < current time
 	//	- session row is not found with account ID
 
-	if !sg.validateID(sessionID) || !sg.validateID(accountID) {
+	if !sg.validateID(sessionID) {
 		return false, nil
 	}
 
 	// TODO: add cache access here, probably redis or if you are lazy a hash map
 
-	ses, err := sg.GetSessionByAccountID(accountID)
+	ses, err := sg.GetSessionBySessionID(sessionID)
 	if err != nil {
 		return false, err
 	}

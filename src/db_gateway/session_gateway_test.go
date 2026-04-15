@@ -100,7 +100,7 @@ func TestValidateSession(t *testing.T) {
 	sg := newTestSessionGateway(t)
 
 	t.Run("Valid ID", func(t *testing.T) {
-		status, err := sg.ValidateSession(tests.DbRowInfo.AccountID, tests.DbRowInfo.SessionID)
+		status, err := sg.ValidateSession(tests.DbRowInfo.SessionID)
 		assert.Nil(t, err)
 		assert.True(t, status)
 	})
@@ -109,16 +109,7 @@ func TestValidateSession(t *testing.T) {
 		ids := []string{"", "nonexistentid"}
 
 		for _, id := range ids {
-			status, err := sg.ValidateSession(tests.DbRowInfo.AccountID, id)
-			assert.Nil(t, err)
-			assert.False(t, status)
-		}
-	})
-
-	t.Run("Invalid account IDs", func(t *testing.T) {
-		ids := []string{"", "nonexistentid"}
-		for _, id := range ids {
-			status, err := sg.ValidateSession(id, tests.DbRowInfo.SessionID)
+			status, err := sg.ValidateSession(id)
 			assert.Nil(t, err)
 			assert.False(t, status)
 		}
@@ -149,7 +140,7 @@ func TestValidateSession(t *testing.T) {
 		)
 		assert.Nil(t, err)
 
-		stat, err := sg.ValidateSession(acc.AccountID, baseSess.SessionID)
+		stat, err := sg.ValidateSession(baseSess.SessionID)
 		assert.Nil(t, err)
 		assert.False(t, stat)
 	})
