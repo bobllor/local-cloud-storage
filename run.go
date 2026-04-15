@@ -13,18 +13,17 @@ import (
 )
 
 func main() {
-	// TODO: add this to the config file
-	addr := ":8080"
-	// TODO: add real logging for prod
-	logger := gologger.NewLogger(log.New(os.Stdout, "", log.Ltime|log.Ldate), gologger.Linfo)
-
-	serv, err := server.NewServer(addr)
+	// TODO: add a function to look for case-insensitive and fuzzy yaml files
+	scfg, err := config.NewServerConfig("config.yml")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// TODO: add a function to look for case-insensitive and fuzzy yaml files
-	scfg, err := config.NewServerConfig("config.yml")
+	// TODO: add this to the config file
+	// TODO: add real logging for prod
+	logger := gologger.NewLogger(log.New(os.Stdout, "", log.Ltime|log.Ldate), gologger.Lsilent)
+
+	serv, err := server.NewServer(scfg.ServerAddress)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -82,5 +81,6 @@ func main() {
 	serv.RegisterHandler(api.UserPostRegisterRoute, ap.User.Post.RegisterUser)
 	serv.RegisterHandler(api.UserPostLoginRoute, ap.User.Post.Login)
 
+	logger.Info("Server started")
 	log.Fatal(serv.Start())
 }

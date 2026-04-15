@@ -19,6 +19,9 @@ type ServerConfig struct {
 	// Environment holds a key-value pair of environment variables. These values will take precedent over values defined
 	// inside EnvFiles. It is recommended to use EnvFiles instead.
 	Environment map[string]string `yaml:"environment"`
+
+	// ServerAddress is the TCP	address of the server. It is expected to be in the format of "host:port".
+	ServerAddress string `yaml:"server_address"`
 }
 
 type DatabaseInfo struct {
