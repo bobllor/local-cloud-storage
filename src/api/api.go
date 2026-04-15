@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	dbcon "github.com/bobllor/cloud-project/src/db_gateway"
+	"github.com/bobllor/gologger"
 )
 
 const (
@@ -11,9 +12,9 @@ const (
 )
 
 // NewApi creates a new Api struct.
-func NewApi(gw *dbcon.Gateway) *Api {
+func NewApi(gw *dbcon.Gateway, logger *gologger.Logger) *Api {
 	api := &Api{
-		User: NewUserHandler(gw),
+		User: NewUserHandler(gw, logger),
 	}
 
 	return api
@@ -34,7 +35,7 @@ func (a *Api) GetHandlers() HandlerMap {
 func (a *Api) addUserHandlers() {
 	u := a.User
 
-	a.addHandler(UserRegisterRoute, u.Post.RegisterUser)
+	a.addHandler(UserPostRegisterRoute, u.Post.RegisterUser)
 }
 
 // addHandler adds a handler to a.HandlerMap. If a duplicate route is found, then this method
