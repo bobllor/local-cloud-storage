@@ -47,8 +47,14 @@ func (s *Server) StartTLS(certFile string, keyFile string) error {
 	return s.httpServer.ListenAndServeTLS(certFile, keyFile)
 }
 
-// RegisterHandler registers a new handler for the Server.
+// RegisterHandlerFunc registers a new handler function. It is not wrapped in middleware.
 // This will panic if an existing pattern is given to register.
-func (s *Server) RegisterHandler(pattern string, handler func(http.ResponseWriter, *http.Request)) {
+func (s *Server) RegisterHandlerFunc(pattern string, handler func(http.ResponseWriter, *http.Request)) {
 	s.Handler.HandleFunc(pattern, handler)
+}
+
+// RegisterAuthHandler registers a new handler.
+// This will panic if an existing pattern is given to register.
+func (s *Server) RegisterHandler(pattern string, handler http.Handler) {
+	s.Handler.Handle(pattern, handler)
 }
