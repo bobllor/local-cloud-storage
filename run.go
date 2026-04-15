@@ -77,10 +77,10 @@ func main() {
 		Session: sg,
 	}
 
-	api := api.NewApi(gw)
+	ap := api.NewApi(gw, logger)
 
-	// TODO: remove later- temp, not permanent
-	serv.RegisterHandler("/", api.User.Post.RegisterUser)
+	serv.RegisterHandler(api.UserPostRegisterRoute, ap.User.Post.RegisterUser)
+	serv.RegisterHandler(api.UserPostLoginRoute, ap.User.Post.Login)
 
 	log.Fatal(serv.Start())
 }
