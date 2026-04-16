@@ -22,8 +22,7 @@ type ApiResponse struct {
 	// Status is the status of the response.
 	Status StatusType `json:"status"`
 
-	// Output is the output data to the response of a struct/map or a slice of struct/map.
-	// It can be omitted.
+	// Output is the output data to the response. It can be omitted.
 	Output any `json:"output,omitempty"`
 
 	// Error is an Error type that occurred due to an issue with the request or backend.
