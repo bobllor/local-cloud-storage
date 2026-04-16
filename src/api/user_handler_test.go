@@ -32,7 +32,7 @@ func TestPostRegisterUser(t *testing.T) {
 	b, err := json.Marshal(map[string]string{"username": "john.doe", "password": "apasswordhere"})
 	assert.Nil(t, err)
 
-	res, err := c.Post(url+"/register", ContentJson, bytes.NewBuffer(b))
+	res, err := c.Post(url+"/api/register", ContentJson, bytes.NewBuffer(b))
 	assert.Nil(t, err)
 	assert.True(t, res.StatusCode < 300 && res.StatusCode >= 200)
 
@@ -58,7 +58,7 @@ func TestLoginUser(t *testing.T) {
 	defer tsv.Close()
 	tc := tsv.Client()
 
-	url := tsv.URL + "/login"
+	url := tsv.URL + "/api/login"
 
 	t.Run("User Exists", func(t *testing.T) {
 		b, err := json.Marshal(map[string]string{
