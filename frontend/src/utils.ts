@@ -2,7 +2,7 @@ import { SERVER_BASE_URL } from "./env";
 
 /**
  * Creates the URL from the given base URL in the .env file. This requires the .env file
- * located in the root folder of the vite files.
+ * located in the root of the React files.
  *  
  * @param path The string path of the url, this must start with a forward slash.
  * @returns The combined URL
