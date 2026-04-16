@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	UserPostRegisterRoute = "POST /register"
-	UserPostLoginRoute    = "POST /login"
+	UserPostRegisterRoute = "POST /api/register"
+	UserPostLoginRoute    = "POST /api/login"
 )
 
 // TODO: add string checker for empty/invalid characters (username/password)
@@ -63,6 +63,7 @@ func (pu *PostUserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	pu.deps.Log.Infof("Login handler accessed (%v)", r.RemoteAddr)
 	var user RequestUserInfo
 
+	WriteHeaders(w, r)
 	c, err := r.Cookie(CookieSessionKey)
 	if err != nil {
 		pu.deps.Log.Infof("Cookie key %s not found", CookieSessionKey)
