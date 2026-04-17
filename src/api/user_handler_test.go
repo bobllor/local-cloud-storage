@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -20,8 +21,8 @@ func TestPostRegisterUser(t *testing.T) {
 	sv := getTestServer(t)
 	gw, db := getGatewayDb(t)
 
-	uh := NewUserHandler(gw)
-	sv.RegisterHandler(UserRegisterRoute, uh.Post.RegisterUser)
+	uh := NewUserHandler(gw, tests.NewTestLogger())
+	sv.RegisterHandlerFunc(UserPostRegisterRoute, uh.Post.RegisterUser)
 
 	mSv := httptest.NewServer(sv.Handler)
 	defer mSv.Close()
@@ -31,7 +32,7 @@ func TestPostRegisterUser(t *testing.T) {
 	b, err := json.Marshal(map[string]string{"username": "john.doe", "password": "apasswordhere"})
 	assert.Nil(t, err)
 
-	res, err := c.Post(url+"/register", ContentJson, bytes.NewBuffer(b))
+	res, err := c.Post(url+"/api/register", ContentJson, bytes.NewBuffer(b))
 	assert.Nil(t, err)
 	assert.True(t, res.StatusCode < 300 && res.StatusCode >= 200)
 
@@ -44,6 +45,58 @@ func TestPostRegisterUser(t *testing.T) {
 	assert.Nil(t, err)
 
 	defer res.Body.Close()
+}
+
+func TestLoginUser(t *testing.T) {
+	sv := getTestServer(t)
+	gw, _ := getGatewayDb(t)
+
+	uh := NewUserHandler(gw, tests.NewTestLogger())
+	sv.RegisterHandlerFunc(UserPostLoginRoute, uh.Post.Login)
+
+	tsv := httptest.NewServer(sv.Handler)
+	defer tsv.Close()
+	tc := tsv.Client()
+
+	url := tsv.URL + "/api/login"
+
+	t.Run("User Exists", func(t *testing.T) {
+		b, err := json.Marshal(map[string]string{
+			"username": tests.DbRowInfo.Username,
+			"password": tests.TestPassword,
+		})
+		assert.Nil(t, err)
+
+		res, err := tc.Post(url, ContentJson, bytes.NewBuffer(b))
+		assert.Nil(t, err)
+		defer res.Body.Close()
+
+		var v ApiResponse
+		err = json.NewDecoder(res.Body).Decode(&v)
+		assert.Nil(t, err)
+
+		assert.Equal(t, v.Status, StatusSuccess)
+		assert.Equal(t, v.Output, true)
+	})
+
+	t.Run("Login Fail", func(t *testing.T) {
+		b, err := json.Marshal(map[string]string{
+			"username": "nonexistent.username",
+			"password": tests.TestPassword,
+		})
+		assert.Nil(t, err)
+
+		res, err := tc.Post(url, ContentJson, bytes.NewBuffer(b))
+		assert.Nil(t, err)
+		defer res.Body.Close()
+
+		var v ApiResponse
+		err = json.NewDecoder(res.Body).Decode(&v)
+		assert.Nil(t, err)
+
+		assert.Equal(t, v.Status, StatusError)
+		assert.Equal(t, v.Error.Code, http.StatusBadRequest)
+	})
 }
 
 // getTestServer creates a new Server test instance.

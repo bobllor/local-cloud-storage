@@ -18,6 +18,7 @@ const (
 	Between ComparisonOperator = "BETWEEN"
 	Like    ComparisonOperator = "LIKE"
 	In      ComparisonOperator = "IN"
+	Exists  ComparisonOperator = "EXISTS"
 )
 
 type LogicalOperator string
@@ -78,7 +79,7 @@ func BuildSetPlaceholder(columns []string) string {
 	return strings.Join(placeholders, ",")
 }
 
-// DBClauseBuilder is a helper in building dynamic WHERE conditions.
+// ClauseBuilder is a helper in building dynamic WHERE conditions.
 //
 // When a new clause is registered, the method call will return the same
 // ClauseBuilder. This can be used to chain multiple conditions with AND/OR.

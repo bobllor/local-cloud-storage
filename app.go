@@ -13,21 +13,15 @@ import (
 )
 
 func main() {
-	// TODO: add this to the config file
-	addr := ":8080"
-	// TODO: add real logging for prod
-	logger := gologger.NewLogger(log.New(os.Stdout, "", log.Ltime|log.Ldate), gologger.Linfo)
-
-	serv, err := server.NewServer(addr)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	// TODO: add a function to look for case-insensitive and fuzzy yaml files
 	scfg, err := config.NewServerConfig("config.yml")
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// TODO: add this to the config file
+	// TODO: add real logging for prod
+	logger := gologger.NewLogger(log.New(os.Stdout, "", log.Ltime|log.Ldate), gologger.Lsilent)
 
 	err = scfg.LoadEnv()
 	if err != nil {
@@ -77,10 +71,16 @@ func main() {
 		Session: sg,
 	}
 
-	api := api.NewApi(gw)
+	ap := api.NewApiHandler(gw, logger)
+	serv, err := server.NewServer(scfg.ServerAddress)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	// TODO: remove later- temp, not permanent
-	serv.RegisterHandler("/", api.User.Post.RegisterUser)
+	serv.RegisterHandlerFunc(api.UserPostRegisterRoute, ap.UserHandler.Post.RegisterUser)
+	serv.RegisterHandlerFunc(api.UserPostLoginRoute, ap.UserHandler.Post.Login)
+	serv.RegisterHandler(api.UserGetUserRoute, ap.CreateLogHandler(ap.UserHandler.Get.GetUserBySessionID))
 
+	logger.Info("Starting server")
 	log.Fatal(serv.Start())
 }

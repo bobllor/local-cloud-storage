@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/bobllor/cloud-project/src/hasher"
+	"github.com/bobllor/cloud-project/src/session"
 	"github.com/bobllor/cloud-project/src/user"
 	"github.com/bobllor/cloud-project/src/utils"
 	"github.com/google/uuid"
@@ -70,29 +71,34 @@ func (ug *UserGateway) AddUser(username string, password string) (*user.UserAcco
 }
 
 // ValidateUser validates if the credentials are correct for the user. The username and
-// password is compared and will return a boolean or an error if one occurs.
-func (ug *UserGateway) ValidateUser(username string, password string) (bool, error) {
+// password is compared and will return a boolean and the user info. If an error occurs,
+// then an error will be returned instead.
+//
+// If validation is true, then the user will always be returned.
+func (ug *UserGateway) ValidateUser(username string, password string) (bool, *user.UserAccount, error) {
 	user, err := ug.GetUserByUsername(username)
 	if err != nil {
-		return false, err
+		return false, nil, err
+	}
+	if user == nil {
+		return false, nil, nil
 	}
 
 	storedHash, err := hasher.ParsePHC(user.PasswordHash)
 	if err != nil {
-		return false, err
+		return false, nil, err
 	}
 
 	validCredentials, err := hasher.Compare(password, storedHash)
 	if err != nil {
-		return false, err
+		return false, nil, err
 	}
 
-	return validCredentials, nil
+	return validCredentials, user, nil
 }
 
 // GetUserByUsername gets the user row based on the username.
-// If the username does not exist in the database, an error will be returned,
-// otherwise standard errors will occur.
+// If the user does not exist, then it will return nil.
 func (ug *UserGateway) GetUserByUsername(username string) (*user.UserAccount, error) {
 	cb := NewClauseBuilder()
 	cb.Equal(user.ColumnUsername, username)
@@ -119,7 +125,8 @@ func (ug *UserGateway) GetUserByUsername(username string) (*user.UserAccount, er
 	}
 
 	if len(users) == 0 {
-		return nil, fmt.Errorf("username %s does not exist in database", username)
+		ug.deps.Log.Infof("user %s has no entries", username)
+		return nil, nil
 	}
 
 	return &users[0], nil
@@ -151,6 +158,45 @@ func (ug *UserGateway) GetUserByID(accountID string) (*user.UserAccount, error) 
 	}
 
 	return &user, nil
+}
+
+// GetUserBySessionID retrieves the user row based on the session ID. If the
+// session ID is not found, then it will return nil.
+// The return will contain all the columns except the password column of the row.
+//
+// If there is a session ID, then there will be an existing user. This does not apply vice versa.
+func (ug *UserGateway) GetUserBySessionID(sessionID string) (*user.UserAccountNoPassword, error) {
+	var us []user.UserAccountNoPassword
+
+	// TODO: add the new sql builder in the future.
+	// this is hard coded for now, as the new sql builder is in progress for writing
+	subquery := fmt.Sprintf("SELECT %s FROM %s WHERE %s=?", session.ColumnSessionID, session.TableName, session.ColumnSessionID)
+	whereClause := fmt.Sprintf("WHERE EXISTS (%s)", subquery)
+	query := fmt.Sprintf(
+		"SELECT %s,%s,%s,%s FROM %s %s",
+		user.ColumnAccountID,
+		user.ColumnUsername,
+		user.ColumnCreatedOn,
+		user.ColumnActive,
+		user.TableName,
+		whereClause,
+	)
+
+	rows, err := ug.database.Query(query, sessionID)
+	if err != nil {
+		return nil, err
+	}
+	err = SelectRows(rows, &us)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(us) == 0 {
+		ug.deps.Log.Infof("No user found with provided session ID")
+		return nil, nil
+	}
+
+	return &us[0], nil
 }
 
 // DeleteUserByID sets an account ID for deletion. This is a soft deletion,

@@ -3,7 +3,7 @@ help:
 	@echo "Commands:"
 	@printf "%3sstart-testdb: Starts the test SQL Docker container\n"
 	@printf "%3sstop-testdb: Stops the test SQL Docker container\n"
-	@printf "%3snpm-rundev: Starts the frontend developmental server"
+	@printf "%3snpm-rundev: Starts the frontend developmental server\n"
 	@exit 0
 
 start-testdb:
