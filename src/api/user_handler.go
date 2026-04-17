@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -13,6 +14,7 @@ import (
 const (
 	UserPostRegisterRoute = "POST /api/register"
 	UserPostLoginRoute    = "POST /api/login"
+	UserGetUserRoute      = "/api/user"
 )
 
 // TODO: add string checker for empty/invalid characters (username/password)
@@ -46,6 +48,50 @@ type GetUserHandler struct {
 	deps    *utils.Deps
 }
 
+// GetUserBySessionID retrieves the user information to the response. This uses
+// the cookie in the headers.
+//
+// This requires a valid session ID in order to retrieve the user. The user
+// will only include the necessary information that is required with the frontend.
+//
+// If the user cannot be found, then the output will be nil in the Response.
+// An error Response will only be returned for internal errors.
+func (gu *GetUserHandler) GetUserBySessionID(w http.ResponseWriter, r *http.Request) {
+	WriteHeaders(w, r)
+
+	gu.deps.Log.Debugf("Request cookies size: %d", len(r.Cookies()))
+
+	id := GetSessionFromCookie(r)
+	if id == "" {
+		err := errors.New("session ID does not exist in cookie")
+		gu.deps.Log.Infof("Cookie %s does not exist for session ID", CookieSessionKey)
+
+		WriteErrorResponse(w, err, http.StatusBadRequest)
+		return
+	}
+
+	ua, err := gu.Gateway.User.GetUserBySessionID(id)
+	if err != nil {
+		WriteErrorResponse(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	if ua == nil {
+		WriteResponse(w, NewApiResponse(nil))
+	} else {
+		res := NewApiResponse(ua)
+		i, err := WriteResponse(w, res)
+		if err != nil {
+			gu.deps.Log.Warnf("failed to write response: %v", err)
+			WriteErrorResponse(w, err, http.StatusInternalServerError)
+
+			return
+		}
+
+		gu.deps.Log.Infof("Successfully written %d byte(s) to response", i)
+	}
+}
+
 type PostUserHandler struct {
 	Gateway *dbcon.Gateway
 	deps    *utils.Deps
@@ -75,7 +121,7 @@ func (pu *PostUserHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 		if validSession {
 			// NOTE: this might be a bad idea. look at this another time
-			err := WriteResponse(w, NewApiResponse(validSession))
+			_, err := WriteResponse(w, NewApiResponse(validSession))
 			if err != nil {
 				WriteErrorResponse(w, err, http.StatusInternalServerError)
 			} else {
@@ -90,7 +136,7 @@ func (pu *PostUserHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	validUser, err := pu.Gateway.User.ValidateUser(user.Username, user.Password)
+	validUser, ua, err := pu.Gateway.User.ValidateUser(user.Username, user.Password)
 	if err != nil {
 		pu.deps.Log.Criticalf("Error occurred during user validation: %v", err)
 		WriteErrorResponse(w, err, http.StatusInternalServerError)
@@ -101,8 +147,14 @@ func (pu *PostUserHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	res := NewApiResponse(validUser)
 	if validUser {
-		// TODO: set cookies here
-		err = WriteResponse(w, res)
+		ses, err := pu.Gateway.Session.UpsertSession(ua.AccountID)
+		if err != nil {
+			WriteErrorResponse(w, err, http.StatusInternalServerError)
+		}
+
+		pu.deps.Log.Infof("Setting session data for user %s", ua.Username)
+		SetCookieSession(w, ses)
+		_, err = WriteResponse(w, res)
 		if err != nil {
 			WriteErrorResponse(w, err, http.StatusInternalServerError)
 		}
@@ -136,7 +188,7 @@ func (pu *PostUserHandler) RegisterUser(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	err = WriteResponse(w, s)
+	_, err = WriteResponse(w, s)
 	if err != nil {
 		WriteErrorResponse(w, err, http.StatusInternalServerError)
 		return
