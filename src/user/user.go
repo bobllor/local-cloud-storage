@@ -22,6 +22,15 @@ type UserAccount struct {
 	Active       bool
 }
 
+// UserAccountNoPassword is the UserAccount struct
+// but does not include the password hash.
+type UserAccountNoPassword struct {
+	AccountID string    `json:"account_id"`
+	Username  string    `json:"username"`
+	CreatedOn time.Time `json:"created_on"`
+	Active    bool      `json:"active"`
+}
+
 // ToArgs converts the struct into an any slice.
 // This is used for query arguments.
 func (ua *UserAccount) ToArgs() []any {
