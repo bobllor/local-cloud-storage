@@ -3,6 +3,12 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+
+	"github.com/bobllor/cloud-project/src/session"
+)
+
+const (
+	CookieSessionKey = "lcsSessionID"
 )
 
 type HandlerMap map[string]func(http.ResponseWriter, *http.Request)
@@ -33,15 +39,18 @@ func WriteErrorResponse(w http.ResponseWriter, err error, statusCode int) {
 // WriteResponse writes a response to the ResponseWriter. If an error occurs
 // while writing the response, it will return the error and the response will not
 // be written.
-func WriteResponse(w http.ResponseWriter, v any) error {
+func WriteResponse(w http.ResponseWriter, v any) (int, error) {
 	b, err := json.Marshal(v)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
-	w.Write(b)
+	i, err := w.Write(b)
+	if err != nil {
+		return 0, err
+	}
 
-	return nil
+	return i, nil
 }
 
 // WriteHeaders writes the headers for CORS.
@@ -50,4 +59,34 @@ func WriteHeaders(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", origin)
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
 	w.Header().Add("Vary", "Origin")
+}
+
+// GetSessionFromCookie retrieves the session ID from the request headers.
+// If the cookie does not exist, then it will return an empty string.
+func GetSessionFromCookie(r *http.Request) string {
+	cookie, err := r.Cookie(CookieSessionKey)
+	if err != nil {
+		return ""
+	}
+
+	return cookie.Value
+}
+
+// SetCookieSession sets the cookie for the session.
+func SetCookieSession(w http.ResponseWriter, s *session.Session) {
+	c := http.Cookie{
+		Name:     CookieSessionKey,
+		Value:    s.SessionID,
+		Path:     "/",
+		MaxAge:   3600,
+		HttpOnly: true,
+		Secure:   true,
+	}
+
+	http.SetCookie(w, &c)
+}
+
+// SetCookie sets the cookie with the given key and value to the headers.
+func SetCookie(w http.ResponseWriter, key string, value string) {
+
 }
