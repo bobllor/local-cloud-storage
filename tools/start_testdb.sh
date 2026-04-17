@@ -29,7 +29,7 @@ if [[ "$container_status" == "false" ]]; then
 
     init_status=false
     echo "Waiting for server connection..."
-    for i in {1..7}; do
+    for i in {1..10}; do
         if ! sql "source $sql_path" 2> /dev/null; then
             sleep 1.5
             continue
