@@ -12,13 +12,10 @@ const (
 	ContentJson = "application/json"
 )
 
-const (
-	CookieSessionKey = "lcsSessionID"
-)
-
 type ApiHandler struct {
 	UserHandler *UserHandler
 	gateway     *dbcon.Gateway
+	log         *gologger.Logger
 }
 
 // NewApiHandler creates a new Api struct.
@@ -26,9 +23,21 @@ func NewApiHandler(gw *dbcon.Gateway, logger *gologger.Logger) *ApiHandler {
 	api := &ApiHandler{
 		UserHandler: NewUserHandler(gw, logger),
 		gateway:     gw,
+		log:         logger,
 	}
 
 	return api
+}
+
+func (ah *ApiHandler) CreateLogHandler(f func(http.ResponseWriter, *http.Request)) http.Handler {
+	next := http.HandlerFunc(f)
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// TODO: fix logging format
+		ah.log.Infof("%s: accessed on agent %s", r.RemoteAddr, r.UserAgent())
+
+		next.ServeHTTP(w, r)
+	})
 }
 
 // CreateAuthHandler creates a new handler from a given handler function, wrapped in an
