@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/bobllor/cloud-project/src/hasher"
+	querybuilder "github.com/bobllor/cloud-project/src/query_builder"
 	"github.com/bobllor/cloud-project/src/session"
 	"github.com/bobllor/cloud-project/src/user"
 	"github.com/bobllor/cloud-project/src/utils"
@@ -168,21 +169,20 @@ func (ug *UserGateway) GetUserByID(accountID string) (*user.UserAccount, error) 
 func (ug *UserGateway) GetUserBySessionID(sessionID string) (*user.UserAccountNoPassword, error) {
 	var us []user.UserAccountNoPassword
 
-	// TODO: add the new sql builder in the future.
-	// this is hard coded for now, as the new sql builder is in progress for writing
-	subquery := fmt.Sprintf("SELECT %s FROM %s WHERE %s=?", session.ColumnSessionID, session.TableName, session.ColumnSessionID)
-	whereClause := fmt.Sprintf("WHERE EXISTS (%s)", subquery)
-	query := fmt.Sprintf(
-		"SELECT %s,%s,%s,%s FROM %s %s",
-		user.ColumnAccountID,
-		user.ColumnUsername,
-		user.ColumnCreatedOn,
-		user.ColumnActive,
-		user.TableName,
-		whereClause,
-	)
+	mSb := querybuilder.NewSqlBuilder(user.TableName)
+	sSb := querybuilder.NewSqlBuilder(session.TableName)
 
-	rows, err := ug.database.Query(query, sessionID)
+	sQuery := sSb.Select().Column(session.ColumnAccountID).Where().Equal(session.ColumnSessionID, sessionID).Build()
+	query := mSb.Select().
+		Columns(
+			user.ColumnAccountID,
+			user.ColumnUsername,
+			user.ColumnCreatedOn,
+			user.ColumnActive,
+		).Where().Exists(sQuery, sSb.Args()...).Build()
+
+	ug.deps.Log.Debugf("Query: %s", query)
+	rows, err := ug.database.Query(query, mSb.Args()...)
 	if err != nil {
 		return nil, err
 	}

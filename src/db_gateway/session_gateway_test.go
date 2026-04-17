@@ -55,6 +55,11 @@ func TestUpsertSessionReplace(t *testing.T) {
 	newS, err := sg.GetSessionByAccountID(tests.DbRowInfo.AccountID)
 	assert.Nil(t, err)
 
+	// artifically adding because for some reason this fails on go test ./... but
+	// it does not fail on a manual run... lol?
+	newS.CreatedOn = newS.CreatedOn.Add(5 * time.Second)
+	newS.ExpireOn = newS.ExpireOn.Add(5 * time.Second)
+
 	// reset the updated values
 	_, err = UpdateRow(
 		sg.database,

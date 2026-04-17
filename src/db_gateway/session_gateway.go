@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	querybuilder "github.com/bobllor/cloud-project/src/query_builder"
 	"github.com/bobllor/cloud-project/src/session"
 	"github.com/bobllor/cloud-project/src/utils"
 	"github.com/google/uuid"
@@ -20,7 +21,6 @@ func NewSessionGateway(db *sql.DB, deps *utils.Deps) *SessionGateway {
 		database:          db,
 		sessionFieldCount: session.ColumnSize,
 		deps:              deps,
-		util:              DBUtility{log: deps.Log},
 	}
 
 	return sg
@@ -30,28 +30,18 @@ type SessionGateway struct {
 	database          *sql.DB
 	sessionFieldCount int
 	deps              *utils.Deps
-	util              DBUtility
 }
 
 // GetSessionByAccountID retrieves the session of the account ID. If a session is not found,
 // then it will return nil.
 func (sg *SessionGateway) GetSessionByAccountID(accountID string) (*session.Session, error) {
-	cb := NewClauseBuilder()
-
-	cb.Equal(session.ColumnAccountID, accountID)
-
-	cbQ, args, err := cb.Build()
-	if err != nil {
-		return nil, err
-	}
-
-	baseQ := fmt.Sprintf("SELECT * FROM %s", session.TableName)
-
 	accSession := []session.Session{}
 
-	query := baseQ + " " + cbQ
+	sb := querybuilder.NewSqlBuilder(session.TableName)
+	query := sb.Select().AllColumns().Where().Equal(session.ColumnAccountID, accountID).Build()
 
-	rows, err := sg.database.Query(query, args...)
+	sg.deps.Log.Debugf("Query: %s", query)
+	rows, err := sg.database.Query(query, sb.Args()...)
 	if err != nil {
 		return nil, err
 	}
@@ -75,17 +65,11 @@ func (sg *SessionGateway) GetSessionBySessionID(sessionID string) (*session.Sess
 		return nil, nil
 	}
 
-	cb := NewClauseBuilder()
-	cb.Equal(session.ColumnSessionID, sessionID)
+	sb := querybuilder.NewSqlBuilder(session.TableName)
+	query := sb.Select().AllColumns().Where().Equal(session.ColumnSessionID, sessionID).Build()
 
-	cbq, args, err := cb.Build()
-	if err != nil {
-		return nil, err
-	}
-
-	query := fmt.Sprintf("SELECT * FROM %s %s", session.TableName, cbq)
-
-	rows, err := sg.database.Query(query, args...)
+	sg.deps.Log.Debugf("Query: %s", query)
+	rows, err := sg.database.Query(query, sb.Args()...)
 	if err != nil {
 		return nil, err
 	}
@@ -97,6 +81,7 @@ func (sg *SessionGateway) GetSessionBySessionID(sessionID string) (*session.Sess
 	}
 
 	if len(ses) == 0 {
+		sg.deps.Log.Info("No session ID found")
 		return nil, nil
 	}
 
