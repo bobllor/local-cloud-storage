@@ -79,6 +79,7 @@ func main() {
 
 	serv.RegisterHandlerFunc(api.UserPostRegisterRoute, ap.UserHandler.Post.RegisterUser)
 	serv.RegisterHandlerFunc(api.UserPostLoginRoute, ap.UserHandler.Post.Login)
+	serv.RegisterHandler(api.UserGetUserRoute, ap.CreateLogHandler(ap.UserHandler.Get.GetUserBySessionID))
 
 	logger.Info("Starting server")
 	log.Fatal(serv.Start())
