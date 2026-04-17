@@ -49,7 +49,7 @@ func TestPostRegisterUser(t *testing.T) {
 
 func TestLoginUser(t *testing.T) {
 	sv := getTestServer(t)
-	gw, _ := getGatewayDb(t)
+	gw, db := getGatewayDb(t)
 
 	uh := NewUserHandler(gw, tests.NewTestLogger())
 	sv.RegisterHandlerFunc(UserPostLoginRoute, uh.Post.Login)
@@ -66,6 +66,20 @@ func TestLoginUser(t *testing.T) {
 			"password": tests.TestPassword,
 		})
 		assert.Nil(t, err)
+
+		t.Cleanup(func() {
+			_, err := dbcon.UpdateRow(
+				db,
+				session.TableName,
+				session.ColumnAccountID,
+				tests.DbRowInfo.AccountID,
+				dbcon.ClauseData{
+					Columns: []string{session.ColumnSessionID},
+					Args:    []any{tests.DbRowInfo.SessionID},
+				},
+			)
+			assert.Nil(t, err)
+		})
 
 		res, err := tc.Post(url, ContentJson, bytes.NewBuffer(b))
 		assert.Nil(t, err)
