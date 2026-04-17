@@ -41,7 +41,7 @@ func TestGetUserByUsername(t *testing.T) {
 func TestCheckCredentials(t *testing.T) {
 	ugw := newTestUserGateway(t)
 
-	status, err := ugw.ValidateUser(tests.DbRowInfo.Username, testPassword)
+	status, _, err := ugw.ValidateUser(tests.DbRowInfo.Username, testPassword)
 	assert.Nil(t, err)
 
 	assert.True(t, status)
@@ -50,11 +50,12 @@ func TestCheckCredentials(t *testing.T) {
 func TestCheckCredentialsInvalid(t *testing.T) {
 	ugw := newTestUserGateway(t)
 
-	status, err := ugw.ValidateUser("userdoesnotexist", testPassword)
+	status, ua, err := ugw.ValidateUser("userdoesnotexist", testPassword)
 	assert.Nil(t, err)
 	assert.False(t, status)
+	assert.Nil(t, ua)
 
-	status, err = ugw.ValidateUser(tests.DbRowInfo.Username, "invalidpassword")
+	status, _, err = ugw.ValidateUser(tests.DbRowInfo.Username, "invalidpassword")
 	assert.Nil(t, err)
 	assert.False(t, status)
 }
@@ -119,7 +120,23 @@ func TestDeleteUser(t *testing.T) {
 
 	assert.Equal(t, uInfo.Active, false)
 	assert.NotEqual(t, uInfo.Active, tests.DbRowInfo.UserActive)
+}
 
+func TestGetUserBySessionID(t *testing.T) {
+	ug := newTestUserGateway(t)
+
+	t.Run("Existing User", func(t *testing.T) {
+		ua, err := ug.GetUserBySessionID(tests.DbRowInfo.SessionID)
+		assert.Nil(t, err)
+		assert.NotNil(t, ua)
+		assert.Equal(t, ua.AccountID, tests.DbRowInfo.AccountID)
+	})
+
+	t.Run("User Does Not Exist", func(t *testing.T) {
+		ua, err := ug.GetUserBySessionID("doesn't exist")
+		assert.Nil(t, err)
+		assert.Nil(t, ua)
+	})
 }
 
 func newTestUserGateway(t *testing.T) *UserGateway {
