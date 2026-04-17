@@ -9,9 +9,9 @@ export type ResponseStatus = "success" | "error";
 /**
  * Represents a successful API response.
  */
-export type ResponseApi = {
+export type ResponseApi<T> = {
     status: ResponseStatus
-    output: Object | Array<Object>
+    output: T
     error?: ResponseError
 }
 
