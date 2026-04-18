@@ -5,28 +5,7 @@ import (
 	"strings"
 )
 
-type ComparisonOperator string
-
-const (
-	OperatorEqual   ComparisonOperator = "="
-	OperatorGt      ComparisonOperator = ">"
-	OperatorGte     ComparisonOperator = ">="
-	OperatorLt      ComparisonOperator = "<"
-	OperatorLte     ComparisonOperator = "<="
-	OperatorNe      ComparisonOperator = "<>"
-	OperatorBetween ComparisonOperator = "BETWEEN"
-	OperatorLike    ComparisonOperator = "LIKE"
-	OperatorIn      ComparisonOperator = "IN"
-	OperatorExists  ComparisonOperator = "EXISTS"
-)
-
-type LogicalOperator string
-
-const (
-	OperatorAnd LogicalOperator = "AND"
-	OperatorOr  LogicalOperator = "OR"
-)
-
+// SqlSelect is a struct to perform SELECT queries.
 type SqlSelect struct {
 	builder *SqlBuilder
 
@@ -52,25 +31,11 @@ func (s *SqlSelect) Build() string {
 	return query
 }
 
-// Column adds a single column to select in the query.
-func (s *SqlSelect) Column(column string) *SqlSelect {
-	s.columns = append(s.columns, column)
-
-	return s
-}
-
 // Columns adds the columns to select in the query.
 func (s *SqlSelect) Columns(columns ...string) *SqlSelect {
 	for _, column := range columns {
 		s.columns = append(s.columns, column)
 	}
-
-	return s
-}
-
-// AllColumns selects all columns of the given table.
-func (s *SqlSelect) AllColumns() *SqlSelect {
-	s.columns = append(s.columns, "*")
 
 	return s
 }

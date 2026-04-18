@@ -9,11 +9,33 @@ const (
 	Insert DMLType = "INSERT"
 )
 
+type ComparisonOperator string
+
+const (
+	OperatorEqual   ComparisonOperator = "="
+	OperatorGt      ComparisonOperator = ">"
+	OperatorGte     ComparisonOperator = ">="
+	OperatorLt      ComparisonOperator = "<"
+	OperatorLte     ComparisonOperator = "<="
+	OperatorNe      ComparisonOperator = "<>"
+	OperatorBetween ComparisonOperator = "BETWEEN"
+	OperatorLike    ComparisonOperator = "LIKE"
+	OperatorIn      ComparisonOperator = "IN"
+	OperatorExists  ComparisonOperator = "EXISTS"
+)
+
+type LogicalOperator string
+
+const (
+	OperatorAnd LogicalOperator = "AND"
+	OperatorOr  LogicalOperator = "OR"
+)
+
 // Builder is an interface used to build SQL queries.
 type Builder interface {
 	Build() string
 
-	// WriteArgs writes to the []any slice with the given arguments.
+	// WriteArgs writes to an any slice with the given arguments.
 	WriteArgs(args ...any)
 }
 
@@ -34,9 +56,11 @@ func NewSqlBuilder(table string) *SqlBuilder {
 }
 
 func (sb *SqlBuilder) Select() *SqlSelect {
-	return &SqlSelect{
+	s := &SqlSelect{
 		builder: sb,
 	}
+
+	return s
 }
 
 // Args returns the any slice used for query arguments.
