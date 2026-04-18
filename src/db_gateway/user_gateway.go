@@ -59,8 +59,7 @@ func (ug *UserGateway) AddUser(username string, password string) (*user.UserAcco
 
 	query := baseQuery + " " + placeholders
 
-	ug.util.LogQueryAndArgs(query, args)
-
+	ug.deps.Log.Debugf("Query: %s | Args: %d", query, len(args))
 	res, err := execQuery(ug.database, query, args...)
 	if err != nil {
 		return nil, err

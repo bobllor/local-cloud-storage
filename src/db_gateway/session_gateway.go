@@ -132,8 +132,8 @@ func (sg *SessionGateway) UpsertSession(accountID string) (*session.Session, err
 }
 
 // ValidateSession validates a session with the user's session ID.
-// If the sessionID is invalid, it does not exist, or it does not match the stored database
-// version, then it will return false.
+// If the sessionID is invalid, it does not exist, it does not match the stored database
+// version, or if it is expired, then it will return false.
 //
 // Any errors will be returned during the database query.
 func (sg *SessionGateway) ValidateSession(sessionID string) (bool, error) {
