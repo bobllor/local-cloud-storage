@@ -101,19 +101,11 @@ func (ug *UserGateway) ValidateUser(username string, password string) (bool, *us
 // GetUserByUsername gets the user row based on the username.
 // If the user does not exist, then it will return nil.
 func (ug *UserGateway) GetUserByUsername(username string) (*user.UserAccount, error) {
-	cb := NewClauseBuilder()
-	cb.Equal(user.ColumnUsername, username)
+	sb := querybuilder.NewSqlBuilder(user.TableName)
 
-	baseQ := fmt.Sprintf("SELECT * FROM %s", user.TableName)
+	query := sb.Select().Columns("*").Where().Equal(user.ColumnUsername, username).Build()
 
-	cbQ, args, err := cb.Build()
-	if err != nil {
-		return nil, err
-	}
-
-	query := baseQ + " " + cbQ
-
-	rows, err := ug.database.Query(query, args...)
+	rows, err := ug.database.Query(query, sb.Args()...)
 	if err != nil {
 		return nil, err
 	}
@@ -135,20 +127,14 @@ func (ug *UserGateway) GetUserByUsername(username string) (*user.UserAccount, er
 
 // GetUserByID retrieves the user row based on the account ID.
 func (ug *UserGateway) GetUserByID(accountID string) (*user.UserAccount, error) {
-	cb := NewClauseBuilder()
-	cb.Equal(user.ColumnAccountID, accountID)
+	sb := querybuilder.NewSqlBuilder(user.TableName)
 
-	baseQuery := fmt.Sprintf("SELECT * FROM %s", user.TableName)
-
-	cbQ, args, err := cb.Build()
-	if err != nil {
-		return nil, err
-	}
+	query := sb.Select().Columns("*").
+		Where().Equal(user.ColumnAccountID, accountID).Build()
 
 	user := user.UserAccount{}
 
-	query := baseQuery + " " + cbQ
-	rows, err := ug.database.Query(query, args...)
+	rows, err := ug.database.Query(query, sb.Args()...)
 	if err != nil {
 		return nil, err
 	}
@@ -172,7 +158,10 @@ func (ug *UserGateway) GetUserBySessionID(sessionID string) (*user.UserAccountNo
 	mSb := querybuilder.NewSqlBuilder(user.TableName)
 	sSb := querybuilder.NewSqlBuilder(session.TableName)
 
-	sQuery := sSb.Select().Columns(session.ColumnAccountID).Where().Equal(session.ColumnSessionID, sessionID).Build()
+	sQuery := sSb.Select().
+		Columns(session.ColumnAccountID).
+		Where().Equal(session.ColumnSessionID, sessionID).Build()
+
 	query := mSb.Select().
 		Columns(
 			user.ColumnAccountID,
