@@ -3,8 +3,10 @@ package querybuilder
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/bobllor/assert"
+	"github.com/bobllor/cloud-project/src/file"
 	"github.com/bobllor/cloud-project/src/session"
 	"github.com/bobllor/cloud-project/src/user"
 )
@@ -53,16 +55,46 @@ func TestSelectWhereBuild(t *testing.T) {
 
 		assert.Equal(t, str, baseStr)
 	})
+}
 
-	t.Run("Exists Operator", func(t *testing.T) {
-		mainSb := NewSqlBuilder(user.TableName)
-		subSb := NewSqlBuilder(session.TableName)
+func TestSelectWhereExistsSubquery(t *testing.T) {
+	mainSb := NewSqlBuilder(user.TableName)
+	subSb := NewSqlBuilder(session.TableName)
 
-		subStr := subSb.Select().Columns(session.ColumnCreatedOn).Where().
-			Equal(session.ColumnAccountID, "15555").Build()
-		mainStr := mainSb.Select().Columns(user.ColumnAccountID).Where().
-			Exists(subStr, subSb.Args()...).Build()
+	subStr := subSb.Select().Columns(session.ColumnCreatedOn).Where().
+		Equal(session.ColumnAccountID, "15555").Build()
+	mainStr := mainSb.Select().Columns(user.ColumnAccountID).Where().
+		Exists(subStr, subSb.Args()...).Build()
 
-		fmt.Println(mainStr, mainSb.Args())
-	})
+	baseStr := fmt.Sprintf(
+		"SELECT %s FROM %s WHERE EXISTS (SELECT %s FROM %s WHERE %s = (?))",
+		user.ColumnAccountID,
+		user.TableName,
+		session.ColumnCreatedOn,
+		session.TableName,
+		session.ColumnAccountID,
+	)
+
+	assert.Equal(t, mainStr, baseStr)
+	assert.Equal(t, len(subSb.Args()), 1)
+}
+
+func TestInsertBuild(t *testing.T) {
+	sb := NewSqlBuilder(file.TableName)
+
+	query := sb.Insert(2).
+		Columns(file.ColumnDeletedOn, file.ColumnFileID).
+		Args(time.Now(), "12345", time.Now(), "12345").
+		Build()
+
+	params := BuildPlaceholder(2, 2)
+
+	baseQuery := fmt.Sprintf(
+		"INSERT INTO %s VALUES %s",
+		file.TableName,
+		params,
+	)
+
+	assert.Equal(t, len(sb.args), 4)
+	assert.Equal(t, query, baseQuery)
 }

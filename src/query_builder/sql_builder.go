@@ -43,8 +43,8 @@ type SqlBuilder struct {
 	// table is the table name that the operations are performed on.
 	table string
 
-	// args is a slice of arguments added to the query, added during
-	// building specific queries such as WHERE conditions or UPDATE columns.
+	// args is a slice used for query parameters. New arguments are
+	// appended on for any method that is adding arguments.
 	args []any
 }
 
@@ -61,6 +61,15 @@ func (sb *SqlBuilder) Select() *SqlSelect {
 	}
 
 	return s
+}
+
+func (sb *SqlBuilder) Insert(paramAmount int) *SqlInsert {
+	si := &SqlInsert{
+		builder:     sb,
+		paramAmount: paramAmount,
+	}
+
+	return si
 }
 
 // Args returns the any slice used for query arguments.
