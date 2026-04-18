@@ -147,6 +147,7 @@ func (pu *PostUserHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	res := NewApiResponse(validUser)
 	if validUser {
+		// a new login will always create a new session ID
 		ses, err := pu.Gateway.Session.UpsertSession(ua.AccountID)
 		if err != nil {
 			WriteErrorResponse(w, err, http.StatusInternalServerError)
@@ -171,6 +172,7 @@ func (pu *PostUserHandler) RegisterUser(w http.ResponseWriter, r *http.Request) 
 
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
+		pu.deps.Log.Warnf("Failed to decode JSON: %v", err)
 		WriteErrorResponse(w, err, http.StatusBadRequest)
 
 		return
@@ -178,18 +180,22 @@ func (pu *PostUserHandler) RegisterUser(w http.ResponseWriter, r *http.Request) 
 
 	acc, err := pu.Gateway.User.AddUser(user.Username, user.Password)
 	if err != nil {
+		pu.deps.Log.Warnf("Failed to add user: %v", err)
 		WriteErrorResponse(w, err, http.StatusInternalServerError)
 		return
 	}
 
 	s, err := pu.Gateway.Session.UpsertSession(acc.AccountID)
 	if err != nil {
+		pu.deps.Log.Warnf("Failed to upsert session: %v", err)
 		WriteErrorResponse(w, err, http.StatusInternalServerError)
 		return
 	}
 
-	_, err = WriteResponse(w, s)
+	a := NewApiResponse(s)
+	_, err = WriteResponse(w, a)
 	if err != nil {
+		pu.deps.Log.Warnf("Failed to write response: %v", err)
 		WriteErrorResponse(w, err, http.StatusInternalServerError)
 		return
 	}
