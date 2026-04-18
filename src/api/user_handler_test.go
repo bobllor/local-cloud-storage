@@ -36,12 +36,14 @@ func TestPostRegisterUser(t *testing.T) {
 	assert.Nil(t, err)
 	assert.True(t, res.StatusCode < 300 && res.StatusCode >= 200)
 
-	var ses session.Session
-	err = json.NewDecoder(res.Body).Decode(&ses)
+	var apres ApiResponse
+	err = json.NewDecoder(res.Body).Decode(&apres)
 	assert.Nil(t, err)
-	assert.NotNil(t, ses)
+	assert.NotNil(t, apres)
 
-	_, err = dbcon.DropRows(db, user.TableName, user.ColumnAccountID, ses.AccountID)
+	ses := apres.Output.(map[string]any)
+
+	_, err = dbcon.DropRows(db, user.TableName, user.ColumnAccountID, ses["AccountID"])
 	assert.Nil(t, err)
 
 	defer res.Body.Close()
