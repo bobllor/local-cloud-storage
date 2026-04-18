@@ -38,7 +38,7 @@ func (sg *SessionGateway) GetSessionByAccountID(accountID string) (*session.Sess
 	accSession := []session.Session{}
 
 	sb := querybuilder.NewSqlBuilder(session.TableName)
-	query := sb.Select().AllColumns().Where().Equal(session.ColumnAccountID, accountID).Build()
+	query := sb.Select().Columns("*").Where().Equal(session.ColumnAccountID, accountID).Build()
 
 	sg.deps.Log.Debugf("Query: %s", query)
 	rows, err := sg.database.Query(query, sb.Args()...)
@@ -66,7 +66,7 @@ func (sg *SessionGateway) GetSessionBySessionID(sessionID string) (*session.Sess
 	}
 
 	sb := querybuilder.NewSqlBuilder(session.TableName)
-	query := sb.Select().AllColumns().Where().Equal(session.ColumnSessionID, sessionID).Build()
+	query := sb.Select().Columns("*").Where().Equal(session.ColumnSessionID, sessionID).Build()
 
 	sg.deps.Log.Debugf("Query: %s", query)
 	rows, err := sg.database.Query(query, sb.Args()...)

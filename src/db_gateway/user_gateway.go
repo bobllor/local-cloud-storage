@@ -172,7 +172,7 @@ func (ug *UserGateway) GetUserBySessionID(sessionID string) (*user.UserAccountNo
 	mSb := querybuilder.NewSqlBuilder(user.TableName)
 	sSb := querybuilder.NewSqlBuilder(session.TableName)
 
-	sQuery := sSb.Select().Column(session.ColumnAccountID).Where().Equal(session.ColumnSessionID, sessionID).Build()
+	sQuery := sSb.Select().Columns(session.ColumnAccountID).Where().Equal(session.ColumnSessionID, sessionID).Build()
 	query := mSb.Select().
 		Columns(
 			user.ColumnAccountID,
