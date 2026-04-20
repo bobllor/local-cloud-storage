@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	querybuilder "github.com/bobllor/cloud-project/src/query_builder"
 	"github.com/bobllor/cloud-project/src/session"
+	"github.com/bobllor/cloud-project/src/sqlquery"
 	"github.com/bobllor/cloud-project/src/utils"
 	"github.com/google/uuid"
 )
@@ -37,11 +37,13 @@ type SessionGateway struct {
 func (sg *SessionGateway) GetSessionByAccountID(accountID string) (*session.Session, error) {
 	accSession := []session.Session{}
 
-	sb := querybuilder.NewSqlBuilder(session.TableName)
-	query := sb.Select().Columns("*").Where().Equal(session.ColumnAccountID, accountID).Build()
+	query, args, err := sqlquery.Select(session.TableName).Where().Equal(session.ColumnAccountID, accountID).Build()
+	if err != nil {
+		return nil, err
+	}
 
 	sg.deps.Log.Debugf("Query: %s", query)
-	rows, err := sg.database.Query(query, sb.Args()...)
+	rows, err := sg.database.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -65,11 +67,13 @@ func (sg *SessionGateway) GetSessionBySessionID(sessionID string) (*session.Sess
 		return nil, nil
 	}
 
-	sb := querybuilder.NewSqlBuilder(session.TableName)
-	query := sb.Select().Columns("*").Where().Equal(session.ColumnSessionID, sessionID).Build()
+	query, args, err := sqlquery.Select(session.TableName).Where().Equal(session.ColumnSessionID, sessionID).Build()
+	if err != nil {
+		return nil, err
+	}
 
 	sg.deps.Log.Debugf("Query: %s", query)
-	rows, err := sg.database.Query(query, sb.Args()...)
+	rows, err := sg.database.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}

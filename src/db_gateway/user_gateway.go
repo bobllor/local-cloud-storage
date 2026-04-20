@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/bobllor/cloud-project/src/hasher"
-	querybuilder "github.com/bobllor/cloud-project/src/query_builder"
 	"github.com/bobllor/cloud-project/src/session"
+	"github.com/bobllor/cloud-project/src/sqlquery"
 	"github.com/bobllor/cloud-project/src/user"
 	"github.com/bobllor/cloud-project/src/utils"
 	"github.com/google/uuid"
@@ -17,7 +17,6 @@ type UserGateway struct {
 	database       *sql.DB
 	userFieldCount int
 	deps           *utils.Deps
-	util           DBUtility
 }
 
 func NewUserGateway(db *sql.DB, deps *utils.Deps) *UserGateway {
@@ -25,9 +24,6 @@ func NewUserGateway(db *sql.DB, deps *utils.Deps) *UserGateway {
 		database:       db,
 		userFieldCount: user.ColumnSize,
 		deps:           deps,
-		util: DBUtility{
-			log: deps.Log,
-		},
 	}
 }
 
@@ -36,12 +32,10 @@ func NewUserGateway(db *sql.DB, deps *utils.Deps) *UserGateway {
 //
 // The password is stored as the PHC string from the password hashing function.
 func (ug *UserGateway) AddUser(username string, password string) (*user.UserAccount, error) {
-	baseQuery := fmt.Sprintf("INSERT INTO %s VALUES", user.TableName)
-
 	accountID := uuid.NewString()
 	raw, err := hasher.Hash(password, nil, hasher.DefaultArgon2Params)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to hash password: %v", err)
 	}
 
 	hashRes := raw.Encode()
@@ -55,19 +49,28 @@ func (ug *UserGateway) AddUser(username string, password string) (*user.UserAcco
 	}
 
 	args := acc.ToArgs()
-	placeholders := BuildPlaceholder(len(args), 1)
 
-	query := baseQuery + " " + placeholders
+	query, args, err := sqlquery.InsertInto(
+		user.TableName,
+		user.ColumnAccountID,
+		user.ColumnUsername,
+		user.ColumnPasswordHash,
+		user.ColumnCreatedOn,
+		user.ColumnActive,
+	).Args(args...).Build()
+	if err != nil {
+		return nil, fmt.Errorf("failed to build INSERT INTO query: %v", err)
+	}
 
 	ug.deps.Log.Debugf("Query: %s | Args: %d", query, len(args))
 	res, err := execQuery(ug.database, query, args...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to execute query: %v", err)
 	}
 
-	ug.util.LogResultRows(res)
+	logResultRows(ug.deps.Log, res)
 
-	return acc, err
+	return acc, nil
 }
 
 // ValidateUser validates if the credentials are correct for the user. The username and
@@ -100,11 +103,13 @@ func (ug *UserGateway) ValidateUser(username string, password string) (bool, *us
 // GetUserByUsername gets the user row based on the username.
 // If the user does not exist, then it will return nil.
 func (ug *UserGateway) GetUserByUsername(username string) (*user.UserAccount, error) {
-	sb := querybuilder.NewSqlBuilder(user.TableName)
+	// TODO: temp hold while testing
+	query, args, err := sqlquery.Select(user.TableName).Where().Equal(user.ColumnUsername, username).Build()
+	if err != nil {
+		return nil, err
+	}
 
-	query := sb.Select().Columns("*").Where().Equal(user.ColumnUsername, username).Build()
-
-	rows, err := ug.database.Query(query, sb.Args()...)
+	rows, err := ug.database.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -126,14 +131,16 @@ func (ug *UserGateway) GetUserByUsername(username string) (*user.UserAccount, er
 
 // GetUserByID retrieves the user row based on the account ID.
 func (ug *UserGateway) GetUserByID(accountID string) (*user.UserAccount, error) {
-	sb := querybuilder.NewSqlBuilder(user.TableName)
-
-	query := sb.Select().Columns("*").
-		Where().Equal(user.ColumnAccountID, accountID).Build()
+	query, args, err := sqlquery.Select(user.TableName).Where().Equal(user.ColumnAccountID, accountID).Build()
+	if err != nil {
+		return nil, err
+	}
 
 	user := user.UserAccount{}
 
-	rows, err := ug.database.Query(query, sb.Args()...)
+	ug.deps.Log.Debugf("Query: %s", query)
+
+	rows, err := ug.database.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -152,30 +159,35 @@ func (ug *UserGateway) GetUserByID(accountID string) (*user.UserAccount, error) 
 //
 // If there is a session ID, then there will be an existing user. This does not apply vice versa.
 func (ug *UserGateway) GetUserBySessionID(sessionID string) (*user.UserAccountNoPassword, error) {
-	var us []user.UserAccountNoPassword
 
-	mSb := querybuilder.NewSqlBuilder(user.TableName)
-	sSb := querybuilder.NewSqlBuilder(session.TableName)
-
-	sQuery := sSb.Select().
-		Columns(session.ColumnAccountID).
+	sQuery, sArgs, err := sqlquery.Select(session.TableName, session.ColumnAccountID).
 		Where().Equal(session.ColumnSessionID, sessionID).Build()
-
-	query := mSb.Select().
-		Columns(
-			user.ColumnAccountID,
-			user.ColumnUsername,
-			user.ColumnCreatedOn,
-			user.ColumnActive,
-		).Where().Exists(sQuery, sSb.Args()...).Build()
-
-	ug.deps.Log.Debugf("Query: %s", query)
-	rows, err := ug.database.Query(query, mSb.Args()...)
 	if err != nil {
 		return nil, err
 	}
+
+	query, args, err := sqlquery.Select(
+		user.TableName,
+		user.ColumnAccountID,
+		user.ColumnUsername,
+		user.ColumnCreatedOn,
+		user.ColumnActive,
+	).Where().Exists(sQuery, sArgs...).Build()
+	if err != nil {
+		return nil, err
+	}
+
+	ug.deps.Log.Debugf("Query: %s", query)
+	rows, err := ug.database.Query(query, args...)
+	if err != nil {
+		ug.deps.Log.Criticalf("Failed to query data in SQL: %v", err)
+		return nil, err
+	}
+
+	var us []user.UserAccountNoPassword
 	err = SelectRows(rows, &us)
 	if err != nil {
+		ug.deps.Log.Criticalf("Failed to parse SQL rows: %v", err)
 		return nil, err
 	}
 
@@ -217,7 +229,7 @@ func (ug *UserGateway) DeleteUserByID(accountID string) error {
 		return err
 	}
 
-	ug.util.LogResultRows(res)
+	logResultRows(ug.deps.Log, res)
 
 	return nil
 }
