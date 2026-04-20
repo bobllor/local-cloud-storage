@@ -27,24 +27,19 @@ type SqlSelect struct {
 }
 
 // Select creates a new SqlSelect to create SELECT queries with
-// the given columns. If no columns are given, then it will
-// default to selecting all columns.
-func Select(columns ...string) *SqlSelect {
+// the given columns on a table.
+//
+// If no columns are given, then it will default to selecting all columns.
+func Select(tableName string, columns ...string) *SqlSelect {
 	if len(columns) == 0 {
 		columns = append(columns, "*")
 	}
 
 	return &SqlSelect{
+		TableName:    tableName,
 		columns:      columns,
 		queryBuilder: &QueryBuilder{},
 	}
-}
-
-// From is used to perform the SELECT query on.
-func (s *SqlSelect) From(tableName string) *SqlSelect {
-	s.TableName = tableName
-
-	return s
 }
 
 // Build builds string for the base SELECT query.

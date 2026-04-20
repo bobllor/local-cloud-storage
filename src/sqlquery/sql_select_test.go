@@ -10,8 +10,7 @@ import (
 )
 
 func TestSelectBuild(t *testing.T) {
-	query, _, err := Select(user.ColumnAccountID, user.ColumnActive, user.ColumnCreatedOn).
-		From(user.TableName).
+	query, _, err := Select(user.TableName, user.ColumnAccountID, user.ColumnActive, user.ColumnCreatedOn).
 		Build()
 	assert.Nil(t, err)
 
@@ -28,7 +27,7 @@ func TestSelectBuild(t *testing.T) {
 
 func TestSelectWhereBuild(t *testing.T) {
 	t.Run("Basic Chaining", func(t *testing.T) {
-		query, args, err := Select(user.ColumnUsername).From(user.TableName).Where().
+		query, args, err := Select(user.TableName, user.ColumnUsername).Where().
 			Equal(user.ColumnAccountID, "12345").And().
 			Equal(user.ColumnActive, true).Or().
 			Equal(user.ColumnCreatedOn, 12345).Build()
@@ -48,7 +47,7 @@ func TestSelectWhereBuild(t *testing.T) {
 	})
 
 	t.Run("In Operator", func(t *testing.T) {
-		query, args, err := Select(user.ColumnAccountID).From(user.TableName).Where().
+		query, args, err := Select(user.TableName, user.ColumnAccountID).Where().
 			In(user.ColumnAccountID, "12345", "5678", "1111").Build()
 		assert.Nil(t, err)
 
@@ -65,10 +64,10 @@ func TestSelectWhereBuild(t *testing.T) {
 }
 
 func TestSelectWhereExistsSubquery(t *testing.T) {
-	subSelect := Select(session.ColumnCreatedOn).From(session.TableName)
+	subSelect := Select(session.TableName, session.ColumnCreatedOn)
 	subQ, subArgs, err := subSelect.Where().Equal(session.ColumnAccountID, "15555").Build()
 	assert.Nil(t, err)
-	mainQ, args, err := Select(user.ColumnAccountID).From(user.TableName).Where().
+	mainQ, args, err := Select(user.TableName, user.ColumnAccountID).Where().
 		Exists(subQ, subArgs...).Build()
 	assert.Nil(t, err)
 
