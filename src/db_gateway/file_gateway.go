@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/bobllor/cloud-project/src/file"
+	"github.com/bobllor/cloud-project/src/session"
+	"github.com/bobllor/cloud-project/src/sqlquery"
 	"github.com/bobllor/cloud-project/src/utils"
 )
 
@@ -278,6 +280,50 @@ func (f *FileGateway) RestoreFiles(fileOwnerID string, fileIDs []string) error {
 	logResultRows(f.deps.Log, res)
 
 	return nil
+}
+
+// GetFilesBySessionAndParentFolder retrieves the files based on the session ID and the parent
+// of the folder.
+func (f *FileGateway) GetFilesBySessionAndParentFolder(sessionID string, parentFolderID *string) ([]file.File, error) {
+	// joins are raw SQL, not going to make it into an ORM due to how complex it is
+	// creates the basic main query for combination with join
+	// the WHERE clause is appended later
+	mainQuery, _, err := sqlquery.Select(fmt.Sprintf("%s f", file.TableName), "f.*").Build()
+	if err != nil {
+		return nil, fmt.Errorf("failed to build query: %v", err)
+	}
+
+	args := []any{sessionID}
+	parentCondition := "= ?"
+	if parentFolderID == nil {
+		parentCondition = "IS NULL"
+	} else {
+		args = append(args, parentFolderID)
+	}
+
+	query := fmt.Sprintf(
+		"%s JOIN %s ON s.%s = f.%s WHERE s.%s = ? AND %s %s",
+		mainQuery,
+		fmt.Sprintf("%s s", session.TableName),
+		session.ColumnAccountID,
+		file.ColumnFileOwnerID,
+		session.ColumnSessionID,
+		file.ColumnParentID,
+		parentCondition,
+	)
+
+	logQuery(f.deps.Log, query)
+	rows, err := f.database.Query(query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query database: %v", err)
+	}
+
+	files, err := f.getFiles(rows)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse File query: %v", err)
+	}
+
+	return files, nil
 }
 
 // getFiles is a helper function used to scan and return
