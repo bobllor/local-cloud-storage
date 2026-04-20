@@ -22,14 +22,8 @@ const (
 
 func NewUserHandler(gw *dbcon.Gateway, logger *gologger.Logger) *UserHandler {
 	uh := &UserHandler{
-		Post: PostUserHandler{
-			Gateway: gw,
-			deps:    utils.NewDeps(logger),
-		},
-		Get: GetUserHandler{
-			Gateway: gw,
-			deps:    utils.NewDeps(logger),
-		},
+		Gateway: gw,
+		deps:    &utils.Deps{Log: logger},
 	}
 
 	return uh
@@ -38,12 +32,6 @@ func NewUserHandler(gw *dbcon.Gateway, logger *gologger.Logger) *UserHandler {
 // UserHandler contains handlers used for handling user related
 // logic.
 type UserHandler struct {
-	Post PostUserHandler
-	Get  GetUserHandler
-	deps *utils.Deps
-}
-
-type GetUserHandler struct {
 	Gateway *dbcon.Gateway
 	deps    *utils.Deps
 }
@@ -56,21 +44,21 @@ type GetUserHandler struct {
 //
 // If the user cannot be found, then the output will be nil in the Response.
 // An error Response will only be returned for internal errors.
-func (gu *GetUserHandler) GetUserBySessionID(w http.ResponseWriter, r *http.Request) {
+func (uh *UserHandler) GetUserBySessionID(w http.ResponseWriter, r *http.Request) {
 	WriteHeaders(w, r)
 
-	gu.deps.Log.Debugf("Request cookies size: %d", len(r.Cookies()))
+	uh.deps.Log.Debugf("Request cookies size: %d", len(r.Cookies()))
 
 	id := GetSessionFromCookie(r)
 	if id == "" {
 		err := errors.New("session ID does not exist in cookie")
-		gu.deps.Log.Infof("Cookie %s does not exist for session ID", CookieSessionKey)
+		uh.deps.Log.Infof("Cookie %s does not exist for session ID", CookieSessionKey)
 
 		WriteErrorResponse(w, err, http.StatusBadRequest)
 		return
 	}
 
-	ua, err := gu.Gateway.User.GetUserBySessionID(id)
+	ua, err := uh.Gateway.User.GetUserBySessionID(id)
 	if err != nil {
 		WriteErrorResponse(w, err, http.StatusInternalServerError)
 		return
@@ -82,22 +70,17 @@ func (gu *GetUserHandler) GetUserBySessionID(w http.ResponseWriter, r *http.Requ
 		res := NewApiResponse(ua)
 		i, err := WriteResponse(w, res)
 		if err != nil {
-			gu.deps.Log.Warnf("failed to write response: %v", err)
+			uh.deps.Log.Warnf("failed to write response: %v", err)
 			WriteErrorResponse(w, err, http.StatusInternalServerError)
 
 			return
 		}
 
-		gu.deps.Log.Infof("Successfully written %d byte(s) to response", i)
+		uh.deps.Log.Infof("Successfully written %d byte(s) to response", i)
 	}
 }
 
-type PostUserHandler struct {
-	Gateway *dbcon.Gateway
-	deps    *utils.Deps
-}
-
-// Login is the handler for handling the login and authentication.
+// PostLogin is the handler for handling the login and authentication.
 // The username and password will be validated if the cookie is not found
 // with a valid session ID.
 //
@@ -105,18 +88,18 @@ type PostUserHandler struct {
 //
 // If the user is successfully authenticated, the output of the response
 // will contain the status and the session ID will be written to the cookie.
-func (pu *PostUserHandler) Login(w http.ResponseWriter, r *http.Request) {
-	pu.deps.Log.Infof("Login handler accessed (%v)", r.RemoteAddr)
+func (uh *UserHandler) PostLogin(w http.ResponseWriter, r *http.Request) {
+	uh.deps.Log.Infof("Login handler accessed (%v)", r.RemoteAddr)
 	var user RequestUserInfo
 
 	WriteHeaders(w, r)
 	c, err := r.Cookie(CookieSessionKey)
 	if err != nil {
-		pu.deps.Log.Infof("Cookie key %s not found", CookieSessionKey)
+		uh.deps.Log.Infof("Cookie key %s not found", CookieSessionKey)
 	} else {
-		validSession, err := pu.Gateway.Session.ValidateSession(c.Value)
+		validSession, err := uh.Gateway.Session.ValidateSession(c.Value)
 		if err != nil {
-			pu.deps.Log.Warnf("Got an error while validating session: %v", err)
+			uh.deps.Log.Warnf("Got an error while validating session: %v", err)
 		}
 
 		if validSession {
@@ -136,24 +119,24 @@ func (pu *PostUserHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	validUser, ua, err := pu.Gateway.User.ValidateUser(user.Username, user.Password)
+	validUser, ua, err := uh.Gateway.User.ValidateUser(user.Username, user.Password)
 	if err != nil {
-		pu.deps.Log.Criticalf("Error occurred during user validation: %v", err)
+		uh.deps.Log.Criticalf("Error occurred during user validation: %v", err)
 		WriteErrorResponse(w, err, http.StatusInternalServerError)
 		return
 	}
 
-	pu.deps.Log.Debugf("%s result: %v", user.Username, validUser)
+	uh.deps.Log.Debugf("%s result: %v", user.Username, validUser)
 
 	res := NewApiResponse(validUser)
 	if validUser {
 		// a new login will always create a new session ID
-		ses, err := pu.Gateway.Session.UpsertSession(ua.AccountID)
+		ses, err := uh.Gateway.Session.UpsertSession(ua.AccountID)
 		if err != nil {
 			WriteErrorResponse(w, err, http.StatusInternalServerError)
 		}
 
-		pu.deps.Log.Infof("Setting session data for user %s", ua.Username)
+		uh.deps.Log.Infof("Setting session data for user %s", ua.Username)
 		SetCookieSession(w, ses)
 		_, err = WriteResponse(w, res)
 		if err != nil {
@@ -165,29 +148,29 @@ func (pu *PostUserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// RegisterUser is the handler for registering users. A new session.Session struct
+// PostRegisterUser is the handler for registering users. A new session.Session struct
 // will be marshalled as the response.
-func (pu *PostUserHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
+func (uh *UserHandler) PostRegisterUser(w http.ResponseWriter, r *http.Request) {
 	var user RequestUserInfo
 
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
-		pu.deps.Log.Warnf("Failed to decode JSON: %v", err)
+		uh.deps.Log.Warnf("Failed to decode JSON: %v", err)
 		WriteErrorResponse(w, err, http.StatusBadRequest)
 
 		return
 	}
 
-	acc, err := pu.Gateway.User.AddUser(user.Username, user.Password)
+	acc, err := uh.Gateway.User.AddUser(user.Username, user.Password)
 	if err != nil {
-		pu.deps.Log.Warnf("Failed to add user: %v", err)
+		uh.deps.Log.Warnf("Failed to add user: %v", err)
 		WriteErrorResponse(w, err, http.StatusInternalServerError)
 		return
 	}
 
-	s, err := pu.Gateway.Session.UpsertSession(acc.AccountID)
+	s, err := uh.Gateway.Session.UpsertSession(acc.AccountID)
 	if err != nil {
-		pu.deps.Log.Warnf("Failed to upsert session: %v", err)
+		uh.deps.Log.Warnf("Failed to upsert session: %v", err)
 		WriteErrorResponse(w, err, http.StatusInternalServerError)
 		return
 	}
@@ -195,7 +178,7 @@ func (pu *PostUserHandler) RegisterUser(w http.ResponseWriter, r *http.Request) 
 	a := NewApiResponse(s)
 	_, err = WriteResponse(w, a)
 	if err != nil {
-		pu.deps.Log.Warnf("Failed to write response: %v", err)
+		uh.deps.Log.Warnf("Failed to write response: %v", err)
 		WriteErrorResponse(w, err, http.StatusInternalServerError)
 		return
 	}

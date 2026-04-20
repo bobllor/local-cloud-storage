@@ -22,7 +22,7 @@ func TestPostRegisterUser(t *testing.T) {
 	gw, db := getGatewayDb(t)
 
 	uh := NewUserHandler(gw, tests.NewTestLogger())
-	sv.RegisterHandlerFunc(UserPostRegisterRoute, uh.Post.RegisterUser)
+	sv.RegisterHandlerFunc(UserPostRegisterRoute, uh.PostRegisterUser)
 
 	mSv := httptest.NewServer(sv.Handler)
 	defer mSv.Close()
@@ -54,7 +54,7 @@ func TestLoginUser(t *testing.T) {
 	gw, db := getGatewayDb(t)
 
 	uh := NewUserHandler(gw, tests.NewTestLogger())
-	sv.RegisterHandlerFunc(UserPostLoginRoute, uh.Post.Login)
+	sv.RegisterHandlerFunc(UserPostLoginRoute, uh.PostLogin)
 
 	tsv := httptest.NewServer(sv.Handler)
 	defer tsv.Close()
