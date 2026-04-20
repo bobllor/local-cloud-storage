@@ -73,6 +73,35 @@ func (ug *UserGateway) AddUser(username string, password string) (*user.UserAcco
 	return acc, nil
 }
 
+// GetUserByUsername gets the user row based on the username.
+// If the user does not exist, then it will return nil.
+func (ug *UserGateway) GetUserByUsername(username string) (*user.UserAccount, error) {
+	query, args, err := sqlquery.Select(user.TableName).Where().Equal(user.ColumnUsername, username).Build()
+	if err != nil {
+		return nil, err
+	}
+
+	logQuery(ug.deps.Log, query)
+	rows, err := ug.database.Query(query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query database: %v", err)
+	}
+
+	users := []user.UserAccount{}
+
+	err = SelectRows(rows, &users)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse rows from query: %v", err)
+	}
+
+	if len(users) == 0 {
+		ug.deps.Log.Infof("user %s has no entries", username)
+		return nil, nil
+	}
+
+	return &users[0], nil
+}
+
 // ValidateUser validates if the credentials are correct for the user. The username and
 // password is compared and will return a boolean and the user info. If an error occurs,
 // then an error will be returned instead.
@@ -100,54 +129,25 @@ func (ug *UserGateway) ValidateUser(username string, password string) (bool, *us
 	return validCredentials, user, nil
 }
 
-// GetUserByUsername gets the user row based on the username.
-// If the user does not exist, then it will return nil.
-func (ug *UserGateway) GetUserByUsername(username string) (*user.UserAccount, error) {
-	// TODO: temp hold while testing
-	query, args, err := sqlquery.Select(user.TableName).Where().Equal(user.ColumnUsername, username).Build()
-	if err != nil {
-		return nil, err
-	}
-
-	rows, err := ug.database.Query(query, args...)
-	if err != nil {
-		return nil, err
-	}
-
-	users := []user.UserAccount{}
-
-	err = SelectRows(rows, &users)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(users) == 0 {
-		ug.deps.Log.Infof("user %s has no entries", username)
-		return nil, nil
-	}
-
-	return &users[0], nil
-}
-
 // GetUserByID retrieves the user row based on the account ID.
 func (ug *UserGateway) GetUserByID(accountID string) (*user.UserAccount, error) {
 	query, args, err := sqlquery.Select(user.TableName).Where().Equal(user.ColumnAccountID, accountID).Build()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to build SELECT query: %v", err)
 	}
 
 	user := user.UserAccount{}
 
-	ug.deps.Log.Debugf("Query: %s", query)
+	logQuery(ug.deps.Log, query)
 
 	rows, err := ug.database.Query(query, args...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to query database: %v", err)
 	}
 
 	err = SelectRow(rows, &user)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse rows from query: %v", err)
 	}
 
 	return &user, nil
