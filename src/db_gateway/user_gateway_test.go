@@ -14,7 +14,7 @@ const (
 	testPassword = "anothertestpassword"
 )
 
-func TestGetUserID(t *testing.T) {
+func TestGetUserByID(t *testing.T) {
 	udb := newTestUserGateway(t)
 
 	user, err := udb.GetUserByID(tests.DbRowInfo.AccountID)
