@@ -50,15 +50,8 @@ type SqlArgs struct {
 
 // QueryBuilder is used to build a SQL query.
 //
-// It uses the elements for building the SQL query:
-//   - Main: DML + columns + FROM + table
-//   - Join: JOIN + table + ON + condition
-//   - Filter: WHERE + condition
-//   - Group: GROUP BY + column
-//   - Group filter: HAVING + condition
-//   - Sort: ORDER BY + condition
-//
-// Main is passed as a string query to QueryBuilder.Build.
+// At the moment only FilterBuilder is supported (WHERE). Other elements
+// add complexity and is better off using raw SQL (joins for example).
 type QueryBuilder struct {
 	FilterBuilder *ConditionClause
 }
