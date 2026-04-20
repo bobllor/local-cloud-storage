@@ -61,6 +61,28 @@ INSERT INTO File
         1234,
         NOW(),
         NULL
+    ),
+    (
+        "89672a64-f3ff-490c-8f2d-7e5cf5d4aa70",
+        "folder1",
+        "dir",
+        "randomfolderidhere",
+        NULL,
+        "path/to/file",
+        101,
+        NOW(),
+        NULL
+    ),
+    (
+        "89672a64-f3ff-490c-8f2d-7e5cf5d4aa70",
+        "test2.txt",
+        "file",
+        "anotherfileidhere",
+        "randomfolderidhere",
+        "/path/to/file",
+        1234,
+        NOW(),
+        NULL
     );
 INSERT INTO Session
     VALUES
