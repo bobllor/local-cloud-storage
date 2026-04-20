@@ -15,7 +15,6 @@ func NewFileGateway(database *sql.DB, deps *utils.Deps) *FileGateway {
 		database:       database,
 		fileFieldCount: file.ColumnSize,
 		deps:           deps,
-		util:           DBUtility{log: deps.Log},
 	}
 
 	return f
@@ -25,7 +24,6 @@ type FileGateway struct {
 	database       *sql.DB
 	fileFieldCount int
 	deps           *utils.Deps
-	util           DBUtility
 }
 
 // GetAllFiles returns a File slice of all File rows belonging to the file owner.
@@ -77,8 +75,7 @@ func (f *FileGateway) GetFiles(fileOwnerID string, conditions []WhereCondition) 
 
 	query := baseQuery + " " + q
 
-	f.util.LogQueryAndArgs(query, args)
-
+	f.deps.Log.Debugf("Query: %s", query)
 	rows, err := f.database.Query(query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query: %v", err)
@@ -144,14 +141,15 @@ func (f *FileGateway) UpdateFiles(fileOwnerID string, cd ClauseData, conditions 
 
 	execArgs := MakeArgs(sargs, args)
 
-	f.util.LogQueryAndArgs(query, execArgs)
+	logQuery(f.deps.Log, query)
 
+	f.deps.Log.Debugf("Query: %s", query)
 	res, err := execQuery(f.database, query, execArgs...)
 	if err != nil {
 		return fmt.Errorf("failed to execute query: %v (args: %v)", err, execArgs)
 	}
 
-	f.util.LogResultRows(res)
+	logResultRows(f.deps.Log, res)
 
 	return nil
 }
@@ -172,14 +170,13 @@ func (f *FileGateway) AddFile(files []file.File) error {
 
 	query = query + " " + paramStr
 
-	f.util.LogQueryAndArgs(query, flatFiles)
-
+	logQuery(f.deps.Log, query)
 	res, err := execQuery(f.database, query, flatFiles...)
 	if err != nil {
 		return fmt.Errorf("failed to insert into %s: %v", file.TableName, err)
 	}
 
-	f.util.LogResultRows(res)
+	logResultRows(f.deps.Log, res)
 
 	return nil
 }
@@ -202,14 +199,13 @@ func (f *FileGateway) UpdateModifiedFiles(fileOwnerID string, fileIDs []string) 
 	finalArgs := []any{time.Now().Format(time.DateTime)}
 	finalArgs = append(finalArgs, args...)
 
-	f.util.LogQueryAndArgs(query, finalArgs)
-
+	logQuery(f.deps.Log, query)
 	res, err := execQuery(f.database, query, finalArgs...)
 	if err != nil {
 		return fmt.Errorf("failed to execute query: %v", err)
 	}
 
-	f.util.LogResultRows(res)
+	logResultRows(f.deps.Log, res)
 
 	return nil
 }
@@ -242,14 +238,14 @@ func (f *FileGateway) DeleteFiles(fileOwnerID string, fileIDs []string) error {
 	finalArgs := []any{time.Now().Format(time.DateTime)}
 	finalArgs = append(finalArgs, args...)
 
-	f.util.LogQueryAndArgs(query, finalArgs)
+	logQuery(f.deps.Log, query)
 
 	res, err := execQuery(f.database, query, finalArgs...)
 	if err != nil {
 		return err
 	}
 
-	f.util.LogResultRows(res)
+	logResultRows(f.deps.Log, res)
 
 	return nil
 }
@@ -272,14 +268,14 @@ func (f *FileGateway) RestoreFiles(fileOwnerID string, fileIDs []string) error {
 	baseQuery := fmt.Sprintf("UPDATE %s SET %s = NULL", file.TableName, file.ColumnDeletedOn)
 	query := baseQuery + " " + cond
 
-	f.util.LogQueryAndArgs(query, args)
+	logQuery(f.deps.Log, query)
 
 	res, err := execQuery(f.database, query, args...)
 	if err != nil {
 		return fmt.Errorf("failed to execute query: %v", err)
 	}
 
-	f.util.LogResultRows(res)
+	logResultRows(f.deps.Log, res)
 
 	return nil
 }

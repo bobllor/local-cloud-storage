@@ -243,28 +243,19 @@ func getReflectValue(v reflect.Value) reflect.Value {
 	return getReflectValue(v.Elem())
 }
 
-// DBUtility is a utility struct for database related operations.
-type DBUtility struct {
-	log *gologger.Logger
-}
-
-// LogResultRows is used to log the SQL result rows. If an error is encountered during
+// logResultRows is used to log the SQL result rows. If an error is encountered during
 // the result parsing, then it will not log the affected rows.
 // This will log to the Info level with no error, and the Warn level if an error does occur.
-//
-// res is the sql.Result.
-func (d *DBUtility) LogResultRows(res sql.Result) {
+func logResultRows(log *gologger.Logger, res sql.Result) {
 	n, err := res.RowsAffected()
 	if err != nil {
-		d.log.Warnf("failed to check results: %v", err)
+		log.Warnf("failed to check row results: %v", err)
 	} else {
-		d.log.Infof("affected rows: %d", n)
+		log.Infof("affected rows: %d", n)
 	}
 }
 
-// logQueryAndArgs is used to log a SQL query and its arguments.
-// Both will be logged to the Debug level.
-func (d *DBUtility) LogQueryAndArgs(query string, args []any) {
-	d.log.Debugf("query: %s", query)
-	d.log.Debugf("args: %v", args)
+// logQuery is used to log the SQL query at the Debug level.
+func logQuery(log *gologger.Logger, query string) {
+	log.Debugf("query: %s", query)
 }
