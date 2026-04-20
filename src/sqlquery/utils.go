@@ -1,4 +1,4 @@
-package querybuilder
+package sqlquery
 
 import (
 	"fmt"
