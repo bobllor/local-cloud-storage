@@ -270,7 +270,7 @@ func TestGetFilesBySessionAndParentFolder(t *testing.T) {
 	assert.Nil(t, err)
 
 	t.Run("Root Folder", func(t *testing.T) {
-		files, err := fg.GetFilesBySessionAndParentFolder(tests.DbRowInfo.SessionID, nil)
+		files, err := fg.GetFilesBySessionAndParentFolder(tests.DbRowInfo.SessionID, "")
 		assert.Nil(t, err)
 
 		assert.Equal(t, len(files), 2)
@@ -280,11 +280,19 @@ func TestGetFilesBySessionAndParentFolder(t *testing.T) {
 		// not located in tests.DbRowInfo, obtained from the test SQL script
 		parent := "randomfolderidhere"
 		baseName := "test2.txt"
-		files, err := fg.GetFilesBySessionAndParentFolder(tests.DbRowInfo.SessionID, &parent)
+		files, err := fg.GetFilesBySessionAndParentFolder(tests.DbRowInfo.SessionID, parent)
 		assert.Nil(t, err)
 
 		assert.Equal(t, len(files), 1)
 		assert.Equal(t, files[0].Name, baseName)
+	})
+
+	t.Run("Invalid Folder", func(t *testing.T) {
+		parent := "doesnotexist"
+
+		_, err := fg.GetFilesBySessionAndParentFolder(tests.DbRowInfo.SessionID, parent)
+		assert.NotNil(t, err)
+		assert.Equal(t, err, FileDoesNotExistErr)
 	})
 }
 
