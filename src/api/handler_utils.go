@@ -39,6 +39,8 @@ func WriteErrorResponse(w http.ResponseWriter, err error, statusCode int) {
 // WriteResponse writes a response to the ResponseWriter. If an error occurs
 // while writing the response, it will return the error and the response will not
 // be written.
+//
+// The bytes written will be returned.
 func WriteResponse(w http.ResponseWriter, v any) (int, error) {
 	b, err := json.Marshal(v)
 	if err != nil {
