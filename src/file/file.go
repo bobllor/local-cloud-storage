@@ -132,38 +132,38 @@ func FlattenFile(files ...File) []any {
 
 type File struct {
 	// OwnerID is the ID of the owner of the file.
-	OwnerID string
+	OwnerID string `json:"accountID"`
 
 	// Name is the name of the file. This includes the extension
 	// of the file.
-	Name string
+	Name string `json:"fileName"`
 
 	// Type is the file type. This is either a "directory" or
 	// a "file".
-	Type string
+	Type string `json:"fileType"`
 
 	// FileID is a unique ID assigned to the file.
-	FileID string
+	FileID string `json:"fileID"`
 
 	// ParentID is the parent's unique ID that the file resides in.
 	// This can be nil, meaning it resides in the root folder.
-	ParentID *string
+	ParentID *string `json:"parentID"`
 
 	// Path is the absolute path to the file on the disk. This is intended
 	// for the backend use only.
-	Path string
+	Path string `json:"filePath"`
 
 	// Size is the size of the file.
-	Size int64
+	Size int64 `json:"fileSize"`
 
 	// ModifiedOn is the most recent time the file has been modified. This
 	// will be the most recent time of change or when it was first created.
 	// This must be in UTC.
-	ModifiedOn time.Time
+	ModifiedOn time.Time `json:"modifedOn"`
 
 	// DeletedOn is the time when the file is set to be deleted. The acutal
 	// deletion occurs after a certain amount of time has passed
 	// since the marked deletion time. This value can be nil.
 	// This must be in UTC.
-	DeletedOn *time.Time
+	DeletedOn *time.Time `json:"deletedOn"`
 }
