@@ -7,6 +7,7 @@ import Login from './components/default-components/Login.tsx'
 import App from './components/App.tsx'
 import StorageHome from './components/auth-components/storage-components/StorageHome.tsx'
 import { authMiddleware, loginMiddleware } from './middleware.ts'
+import FileProvider from './context/FileContext.tsx'
 
 const router = createBrowserRouter([
   {
@@ -33,6 +34,8 @@ const router = createBrowserRouter([
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
+    <FileProvider>
       <RouterProvider router={router} />
+    </FileProvider>
   </StrictMode>,
 )
