@@ -2,6 +2,7 @@ package dbgateway
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -9,6 +10,10 @@ import (
 	"github.com/bobllor/cloud-project/src/session"
 	"github.com/bobllor/cloud-project/src/sqlquery"
 	"github.com/bobllor/cloud-project/src/utils"
+)
+
+var (
+	FileDoesNotExistErr = errors.New("given file ID does not exist")
 )
 
 // NewFileGateway creates a new FileGateway for database related options.
@@ -46,7 +51,7 @@ func (f *FileGateway) GetAllFiles(fileOwnerID string) ([]file.File, error) {
 
 	rows, err := f.database.Query(query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query %s: %v", file.TableName, err)
+		return nil, fmt.Errorf("failed to query %s: %v | query: %s", file.TableName, err, query)
 	}
 
 	files, err := f.getFiles(rows)
@@ -77,10 +82,9 @@ func (f *FileGateway) GetFiles(fileOwnerID string, conditions []WhereCondition) 
 
 	query := baseQuery + " " + q
 
-	f.deps.Log.Debugf("Query: %s", query)
 	rows, err := f.database.Query(query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query: %v", err)
+		return nil, fmt.Errorf("failed to query: %v | query: %s", err, query)
 	}
 
 	files, err := f.getFiles(rows)
@@ -143,12 +147,10 @@ func (f *FileGateway) UpdateFiles(fileOwnerID string, cd ClauseData, conditions 
 
 	execArgs := MakeArgs(sargs, args)
 
-	logQuery(f.deps.Log, query)
-
 	f.deps.Log.Debugf("Query: %s", query)
 	res, err := execQuery(f.database, query, execArgs...)
 	if err != nil {
-		return fmt.Errorf("failed to execute query: %v (args: %v)", err, execArgs)
+		return fmt.Errorf("failed to execute query: %v (args: %v) | query: %s", err, execArgs, query)
 	}
 
 	logResultRows(f.deps.Log, res)
@@ -172,10 +174,9 @@ func (f *FileGateway) AddFile(files []file.File) error {
 
 	query = query + " " + paramStr
 
-	logQuery(f.deps.Log, query)
 	res, err := execQuery(f.database, query, flatFiles...)
 	if err != nil {
-		return fmt.Errorf("failed to insert into %s: %v", file.TableName, err)
+		return fmt.Errorf("failed to insert into %s: %v | query: %s", file.TableName, err, query)
 	}
 
 	logResultRows(f.deps.Log, res)
@@ -201,10 +202,9 @@ func (f *FileGateway) UpdateModifiedFiles(fileOwnerID string, fileIDs []string) 
 	finalArgs := []any{time.Now().Format(time.DateTime)}
 	finalArgs = append(finalArgs, args...)
 
-	logQuery(f.deps.Log, query)
 	res, err := execQuery(f.database, query, finalArgs...)
 	if err != nil {
-		return fmt.Errorf("failed to execute query: %v", err)
+		return fmt.Errorf("failed to execute query: %v | query: %s", err, query)
 	}
 
 	logResultRows(f.deps.Log, res)
@@ -240,11 +240,9 @@ func (f *FileGateway) DeleteFiles(fileOwnerID string, fileIDs []string) error {
 	finalArgs := []any{time.Now().Format(time.DateTime)}
 	finalArgs = append(finalArgs, args...)
 
-	logQuery(f.deps.Log, query)
-
 	res, err := execQuery(f.database, query, finalArgs...)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to execute query: %v | query: %s", err, query)
 	}
 
 	logResultRows(f.deps.Log, res)
@@ -270,11 +268,9 @@ func (f *FileGateway) RestoreFiles(fileOwnerID string, fileIDs []string) error {
 	baseQuery := fmt.Sprintf("UPDATE %s SET %s = NULL", file.TableName, file.ColumnDeletedOn)
 	query := baseQuery + " " + cond
 
-	logQuery(f.deps.Log, query)
-
 	res, err := execQuery(f.database, query, args...)
 	if err != nil {
-		return fmt.Errorf("failed to execute query: %v", err)
+		return fmt.Errorf("failed to execute query: %v | query: %s", err, query)
 	}
 
 	logResultRows(f.deps.Log, res)
@@ -284,7 +280,22 @@ func (f *FileGateway) RestoreFiles(fileOwnerID string, fileIDs []string) error {
 
 // GetFilesBySessionAndParentFolder retrieves the files based on the session ID and the parent
 // of the folder.
-func (f *FileGateway) GetFilesBySessionAndParentFolder(sessionID string, parentFolderID *string) ([]file.File, error) {
+//
+// If the parentFolderID does not exist, it will return a 404 and error.
+func (f *FileGateway) GetFilesBySessionAndParentFolder(sessionID string, parentFolderID string) ([]file.File, error) {
+	if parentFolderID != "" {
+		validID, err := f.validateFileExists(parentFolderID)
+		if err != nil {
+			f.deps.Log.Criticalf("Failed to validate file (database error): %v", err)
+			return nil, err
+		}
+
+		if !validID {
+			f.deps.Log.Infof("Parent ID %s does not have an existing entry", parentFolderID)
+			return nil, FileDoesNotExistErr
+		}
+	}
+
 	// joins are raw SQL, not going to make it into an ORM due to how complex it is
 	// creates the basic main query for combination with join
 	// the WHERE clause is appended later
@@ -295,7 +306,7 @@ func (f *FileGateway) GetFilesBySessionAndParentFolder(sessionID string, parentF
 
 	args := []any{sessionID}
 	parentCondition := "= ?"
-	if parentFolderID == nil {
+	if parentFolderID == "" {
 		parentCondition = "IS NULL"
 	} else {
 		args = append(args, parentFolderID)
@@ -312,10 +323,9 @@ func (f *FileGateway) GetFilesBySessionAndParentFolder(sessionID string, parentF
 		parentCondition,
 	)
 
-	logQuery(f.deps.Log, query)
 	rows, err := f.database.Query(query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query database: %v", err)
+		return nil, fmt.Errorf("failed to query database: %v | query: %s", err, query)
 	}
 
 	files, err := f.getFiles(rows)
@@ -324,6 +334,37 @@ func (f *FileGateway) GetFilesBySessionAndParentFolder(sessionID string, parentF
 	}
 
 	return files, nil
+}
+
+// validateFileExists checks if the folder ID has the correct formatting and
+// a database query if it exists in the table.
+//
+// If no errors occur it will return true for validation. Any failures will return false.
+// If an error occurs, it will return an error.
+func (f *FileGateway) validateFileExists(fileID string) (bool, error) {
+	// doesnt matter what column is chosen
+	query, args, err := sqlquery.Select(file.TableName).Where().Equal(file.ColumnFileID, fileID).Build()
+	if err != nil {
+		return false, err
+	}
+
+	// TODO: add formatting here
+	rows, err := f.database.Query(query, args...)
+	if err != nil {
+		return false, fmt.Errorf("failed to execute database query: %v | query: %s", err, query)
+	}
+
+	files, err := f.getFiles(rows)
+	if err != nil {
+		return false, fmt.Errorf("failed to retrieve rows with query: %v", err)
+	}
+
+	f.deps.Log.Debugf("Validate file var size: %d", len(files))
+	if len(files) == 0 {
+		return false, nil
+	}
+
+	return true, nil
 }
 
 // getFiles is a helper function used to scan and return
