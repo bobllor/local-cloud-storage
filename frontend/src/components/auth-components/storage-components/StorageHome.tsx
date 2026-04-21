@@ -1,7 +1,8 @@
-import type { JSX } from "react";
+import { type JSX } from "react";
 import { NavLink } from "react-router";
 
 export default function StorageHome(): JSX.Element{
+
     return (
         <>
             <div>
