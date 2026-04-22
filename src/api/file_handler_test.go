@@ -10,14 +10,13 @@ import (
 	"github.com/bobllor/assert"
 	"github.com/bobllor/cloud-project/src/file"
 	"github.com/bobllor/cloud-project/src/tests"
-	"github.com/bobllor/cloud-project/src/utils"
 )
 
 func TestGetFilesBySessionAndParent(t *testing.T) {
 	mux := http.NewServeMux()
 	gw, _ := getGatewayDb(t)
 
-	fh := NewFileHandler(gw, utils.NewTestDeps())
+	fh := NewFileHandler(gw, tests.NewTestLogger())
 
 	mux.HandleFunc(FileGetFileRootRoute, fh.GetFiles)
 	mux.HandleFunc(FileGetFileParentRoute, fh.GetFiles)

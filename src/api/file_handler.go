@@ -7,6 +7,7 @@ import (
 
 	dbgateway "github.com/bobllor/cloud-project/src/db_gateway"
 	"github.com/bobllor/cloud-project/src/utils"
+	"github.com/bobllor/gologger"
 )
 
 const (
@@ -19,10 +20,10 @@ type FileHandler struct {
 	deps    *utils.Deps
 }
 
-func NewFileHandler(gw *dbgateway.Gateway, deps *utils.Deps) *FileHandler {
+func NewFileHandler(gw *dbgateway.Gateway, logger *gologger.Logger) *FileHandler {
 	return &FileHandler{
 		gateway: gw,
-		deps:    deps,
+		deps:    utils.NewDeps(logger),
 	}
 }
 
@@ -34,7 +35,6 @@ func NewFileHandler(gw *dbgateway.Gateway, deps *utils.Deps) *FileHandler {
 //
 // This requires the auth middleware session ID.
 func (fh *FileHandler) GetFiles(w http.ResponseWriter, r *http.Request) {
-	WriteHeaders(w, r)
 	parentKey := "parentID"
 
 	parentID := r.PathValue(parentKey)
