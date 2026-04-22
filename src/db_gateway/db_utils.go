@@ -254,8 +254,3 @@ func logResultRows(log *gologger.Logger, res sql.Result) {
 		log.Infof("affected rows: %d", n)
 	}
 }
-
-// logQuery is used to log the SQL query at the Debug level.
-func logQuery(log *gologger.Logger, query string) {
-	log.Debugf("query: %s", query)
-}

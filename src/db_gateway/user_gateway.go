@@ -62,10 +62,9 @@ func (ug *UserGateway) AddUser(username string, password string) (*user.UserAcco
 		return nil, fmt.Errorf("failed to build INSERT INTO query: %v", err)
 	}
 
-	ug.deps.Log.Debugf("Query: %s | Args: %d", query, len(args))
 	res, err := execQuery(ug.database, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("failed to execute query: %v", err)
+		return nil, fmt.Errorf("failed to execute query: %v | query: %s", err, query)
 	}
 
 	logResultRows(ug.deps.Log, res)
@@ -81,10 +80,9 @@ func (ug *UserGateway) GetUserByUsername(username string) (*user.UserAccount, er
 		return nil, err
 	}
 
-	logQuery(ug.deps.Log, query)
 	rows, err := ug.database.Query(query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query database: %v", err)
+		return nil, fmt.Errorf("failed to execute query: %v | query: %s", err, query)
 	}
 
 	users := []user.UserAccount{}
@@ -138,11 +136,9 @@ func (ug *UserGateway) GetUserByID(accountID string) (*user.UserAccount, error) 
 
 	user := user.UserAccount{}
 
-	logQuery(ug.deps.Log, query)
-
 	rows, err := ug.database.Query(query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query database: %v", err)
+		return nil, fmt.Errorf("failed to execute query: %v | query: %s", err, query)
 	}
 
 	err = SelectRow(rows, &user)
@@ -177,10 +173,9 @@ func (ug *UserGateway) GetUserBySessionID(sessionID string) (*user.UserAccountNo
 		return nil, err
 	}
 
-	ug.deps.Log.Debugf("Query: %s", query)
 	rows, err := ug.database.Query(query, args...)
 	if err != nil {
-		ug.deps.Log.Criticalf("Failed to query data in SQL: %v", err)
+		ug.deps.Log.Criticalf("Failed to execute query: %v | query: %s", err, query)
 		return nil, err
 	}
 

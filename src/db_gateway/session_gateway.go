@@ -42,15 +42,14 @@ func (sg *SessionGateway) GetSessionByAccountID(accountID string) (*session.Sess
 		return nil, err
 	}
 
-	sg.deps.Log.Debugf("Query: %s", query)
 	rows, err := sg.database.Query(query, args...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to query database: %v | query: %s", err, query)
 	}
 
 	err = SelectRows(rows, &accSession)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse database rows: %v", err)
 	}
 
 	if len(accSession) == 0 {
@@ -72,10 +71,9 @@ func (sg *SessionGateway) GetSessionBySessionID(sessionID string) (*session.Sess
 		return nil, err
 	}
 
-	sg.deps.Log.Debugf("Query: %s", query)
 	rows, err := sg.database.Query(query, args...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to query database: %v | query: %s", err, query)
 	}
 
 	var ses []session.Session
