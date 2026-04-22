@@ -269,14 +269,14 @@ func TestGetFilesBySessionAndParentFolder(t *testing.T) {
 	fg, err := getTestFileGateway()
 	assert.Nil(t, err)
 
-	t.Run("Root Folder", func(t *testing.T) {
+	t.Run("Root folder", func(t *testing.T) {
 		files, err := fg.GetFilesBySessionAndParentFolder(tests.DbRowInfo.SessionID, "")
 		assert.Nil(t, err)
 
 		assert.Equal(t, len(files), 2)
 	})
 
-	t.Run("Child Folder", func(t *testing.T) {
+	t.Run("Child folder", func(t *testing.T) {
 		// not located in tests.DbRowInfo, obtained from the test SQL script
 		parent := "randomfolderidhere"
 		baseName := "test2.txt"
@@ -287,12 +287,31 @@ func TestGetFilesBySessionAndParentFolder(t *testing.T) {
 		assert.Equal(t, files[0].Name, baseName)
 	})
 
-	t.Run("Invalid Folder", func(t *testing.T) {
+	t.Run("Invalid folder", func(t *testing.T) {
 		parent := "doesnotexist"
 
 		_, err := fg.GetFilesBySessionAndParentFolder(tests.DbRowInfo.SessionID, parent)
 		assert.NotNil(t, err)
 		assert.Equal(t, err, FileDoesNotExistErr)
+	})
+}
+
+func TestValidateFileExists(t *testing.T) {
+	gw, err := getTestFileGateway()
+	assert.Nil(t, err)
+
+	t.Run("File exists", func(t *testing.T) {
+		stat, err := gw.validateFileExists(tests.DbRowInfo.SessionID, tests.DbRowInfo.FileID)
+		assert.Nil(t, err)
+
+		assert.True(t, stat)
+	})
+
+	t.Run("File not exists", func(t *testing.T) {
+		stat, err := gw.validateFileExists(tests.DbRowInfo.SessionID, "12345")
+		assert.Nil(t, err)
+
+		assert.False(t, stat)
 	})
 }
 
