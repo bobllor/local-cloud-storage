@@ -45,8 +45,6 @@ type UserHandler struct {
 // If the user cannot be found, then the output will be nil in the Response.
 // An error Response will only be returned for internal errors.
 func (uh *UserHandler) GetUserBySessionID(w http.ResponseWriter, r *http.Request) {
-	WriteHeaders(w, r)
-
 	uh.deps.Log.Debugf("Request cookies size: %d", len(r.Cookies()))
 
 	id := GetSessionFromCookie(r)
@@ -92,7 +90,6 @@ func (uh *UserHandler) PostLogin(w http.ResponseWriter, r *http.Request) {
 	uh.deps.Log.Infof("Login handler accessed (%v)", r.RemoteAddr)
 	var user RequestUserInfo
 
-	WriteHeaders(w, r)
 	c, err := r.Cookie(CookieSessionKey)
 	if err != nil {
 		uh.deps.Log.Infof("Cookie key %s not found", CookieSessionKey)
