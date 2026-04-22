@@ -14,6 +14,7 @@ const (
 
 type ApiHandler struct {
 	UserHandler *UserHandler
+	FileHandler *FileHandler
 	gateway     *dbcon.Gateway
 	log         *gologger.Logger
 }
@@ -22,6 +23,7 @@ type ApiHandler struct {
 func NewApiHandler(gw *dbcon.Gateway, logger *gologger.Logger) *ApiHandler {
 	api := &ApiHandler{
 		UserHandler: NewUserHandler(gw, logger),
+		FileHandler: NewFileHandler(gw, logger),
 		gateway:     gw,
 		log:         logger,
 	}
@@ -29,12 +31,16 @@ func NewApiHandler(gw *dbcon.Gateway, logger *gologger.Logger) *ApiHandler {
 	return api
 }
 
-func (ah *ApiHandler) CreateLogHandler(f func(http.ResponseWriter, *http.Request)) http.Handler {
+// RequestMiddleware wraps a function with a middleware used to log and write headers by default.
+//
+// This does not handle auth, use ah.CreateAuthMiddleware for auth based middleware.
+func (ah *ApiHandler) CreateRequestMiddleware(f func(http.ResponseWriter, *http.Request)) http.Handler {
 	next := http.HandlerFunc(f)
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// TODO: fix logging format
-		ah.log.Infof("%s: accessed on agent %s", r.RemoteAddr, r.UserAgent())
+		// TODO: add more logging and things yeah.
+		ah.middlewareLogger(r)
+		WriteHeaders(w, r)
 
 		next.ServeHTTP(w, r)
 	})
@@ -42,15 +48,19 @@ func (ah *ApiHandler) CreateLogHandler(f func(http.ResponseWriter, *http.Request
 
 // CreateAuthHandler creates a new handler from a given handler function, wrapped in an
 // authentication-based closure.
-func (ah *ApiHandler) CreateAuthHandler(f func(http.ResponseWriter, *http.Request)) http.Handler {
+//
+// Headers are automatically written if wrapped with this method.
+func (ah *ApiHandler) CreateAuthMiddleware(f func(http.ResponseWriter, *http.Request)) http.Handler {
 	next := http.HandlerFunc(f)
 
-	// TODO: add logging
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ah.middlewareLogger(r)
+
 		sessionCookie, err := r.Cookie(CookieSessionKey)
 		WriteHeaders(w, r)
 		if err != nil {
-			newErr := errors.New("unauthorized")
+			newErr := errors.New("unauthorized access")
+			ah.log.Infof("Unauthorized access, no cookie found for %v", r.RemoteAddr)
 			WriteErrorResponse(w, newErr, http.StatusUnauthorized)
 
 			return
@@ -58,12 +68,14 @@ func (ah *ApiHandler) CreateAuthHandler(f func(http.ResponseWriter, *http.Reques
 
 		validSession, err := ah.gateway.Session.ValidateSession(sessionCookie.Value)
 		if err != nil {
+			ah.log.Criticalf("Validating session database query failed: %v", err)
 			WriteErrorResponse(w, err, http.StatusInternalServerError)
 			return
 		}
 
 		if !validSession {
 			sessionErr := errors.New("session ID is invalid")
+			ah.log.Infof("Invalid session ID, failed validation for %v", r.RemoteAddr)
 			WriteErrorResponse(w, sessionErr, http.StatusUnauthorized)
 
 			return
@@ -71,4 +83,10 @@ func (ah *ApiHandler) CreateAuthHandler(f func(http.ResponseWriter, *http.Reques
 
 		next.ServeHTTP(w, r)
 	})
+}
+
+// middlewareLogger is a helper function used to log the request information.
+// This is used for general logging of the request.
+func (ah *ApiHandler) middlewareLogger(r *http.Request) {
+	ah.log.Infof("%s: accessed on agent %s", r.RemoteAddr, r.UserAgent())
 }
