@@ -147,7 +147,6 @@ func (f *FileGateway) UpdateFiles(fileOwnerID string, cd ClauseData, conditions 
 
 	execArgs := MakeArgs(sargs, args)
 
-	f.deps.Log.Debugf("Query: %s", query)
 	res, err := execQuery(f.database, query, execArgs...)
 	if err != nil {
 		return fmt.Errorf("failed to execute query: %v (args: %v) | query: %s", err, execArgs, query)
@@ -284,7 +283,7 @@ func (f *FileGateway) RestoreFiles(fileOwnerID string, fileIDs []string) error {
 // If the parentFolderID does not exist, it will return a 404 and error.
 func (f *FileGateway) GetFilesBySessionAndParentFolder(sessionID string, parentFolderID string) ([]file.File, error) {
 	if parentFolderID != "" {
-		validID, err := f.validateFileExists(parentFolderID)
+		validID, err := f.validateFileExists(sessionID, parentFolderID)
 		if err != nil {
 			f.deps.Log.Criticalf("Failed to validate file (database error): %v", err)
 			return nil, err
@@ -312,8 +311,12 @@ func (f *FileGateway) GetFilesBySessionAndParentFolder(sessionID string, parentF
 		args = append(args, parentFolderID)
 	}
 
-	query := fmt.Sprintf(
-		"%s JOIN %s ON s.%s = f.%s WHERE s.%s = ? AND %s %s",
+	query := fmt.Sprintf(`
+		%s 
+		JOIN %s 
+			ON s.%s = f.%s 
+		WHERE s.%s = ? AND %s %s
+		`,
 		mainQuery,
 		fmt.Sprintf("%s s", session.TableName),
 		session.ColumnAccountID,
@@ -338,29 +341,40 @@ func (f *FileGateway) GetFilesBySessionAndParentFolder(sessionID string, parentF
 
 // validateFileExists checks if the folder ID has the correct formatting and
 // a database query if it exists in the table.
+// It requires the session ID in order to check for the existence of the folder.
 //
 // If no errors occur it will return true for validation. Any failures will return false.
 // If an error occurs, it will return an error.
-func (f *FileGateway) validateFileExists(fileID string) (bool, error) {
-	// doesnt matter what column is chosen
-	query, args, err := sqlquery.Select(file.TableName).Where().Equal(file.ColumnFileID, fileID).Build()
-	if err != nil {
-		return false, err
-	}
+func (f *FileGateway) validateFileExists(sessionID string, fileID string) (bool, error) {
+	query := fmt.Sprintf(`
+		SELECT COUNT(*) 
+		FROM %s f 
+		JOIN %s s 
+			ON s.%s = f.%s 
+		WHERE s.%s = ? AND f.%s = ?
+		`,
+		fmt.Sprintf("%s", file.TableName),
+		fmt.Sprintf("%s", session.TableName),
+		session.ColumnAccountID,
+		file.ColumnFileOwnerID,
+		session.ColumnSessionID,
+		file.ColumnFileID,
+	)
 
-	// TODO: add formatting here
-	rows, err := f.database.Query(query, args...)
+	rows, err := f.database.Query(query, sessionID, fileID)
 	if err != nil {
 		return false, fmt.Errorf("failed to execute database query: %v | query: %s", err, query)
 	}
 
-	files, err := f.getFiles(rows)
+	type Counter struct{ Count int }
+	var counter Counter
+	err = SelectRow(rows, &counter)
 	if err != nil {
 		return false, fmt.Errorf("failed to retrieve rows with query: %v", err)
 	}
+	f.deps.Log.Debugf("Rows found: %v", counter)
 
-	f.deps.Log.Debugf("Validate file var size: %d", len(files))
-	if len(files) == 0 {
+	if counter.Count == 0 {
 		return false, nil
 	}
 
