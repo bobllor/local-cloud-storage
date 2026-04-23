@@ -17,7 +17,7 @@ export type dbFile = {
  * In-memory map representing the cache of the file state. Each key
  * represents a parent ID with all of its files as its values.
  */
-export type fileCache = Map<string, Array<dbFile>>;
+export type fileMap = Map<string, Array<dbFile>>;
 
 export const FileContext = createContext<Context>({
     fileData: new Map<string, Array<dbFile>>(),
@@ -25,7 +25,7 @@ export const FileContext = createContext<Context>({
 });
 
 export default function FileProvider({children}: {children: JSX.Element}): JSX.Element{
-    const [fileData, setFileData] = useState<fileCache>(new Map<string, Array<dbFile>>());
+    const [fileData, setFileData] = useState<fileMap>(new Map<string, Array<dbFile>>());
 
     const data: Context = {
         fileData,
@@ -40,6 +40,6 @@ export default function FileProvider({children}: {children: JSX.Element}): JSX.E
 }
 
 type Context = {
-    fileData: fileCache,
-    setFileData: React.Dispatch<SetStateAction<fileCache>>,
+    fileData: fileMap,
+    setFileData: React.Dispatch<SetStateAction<fileMap>>,
 };
