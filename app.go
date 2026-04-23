@@ -77,6 +77,8 @@ func main() {
 		log.Fatal(err)
 	}
 
+	serv.RegisterHandler(api.SessionGetValidateSessionRoute, ap.CreateRequestMiddleware(ap.SessionHandler.GetValidateSession))
+
 	serv.RegisterHandler(api.UserPostRegisterRoute, ap.CreateRequestMiddleware(ap.UserHandler.PostRegisterUser))
 	serv.RegisterHandler(api.UserPostLoginRoute, ap.CreateRequestMiddleware(ap.UserHandler.PostLogin))
 	serv.RegisterHandler(api.UserGetUserRoute, ap.CreateAuthMiddleware(ap.UserHandler.GetUserBySessionID))
