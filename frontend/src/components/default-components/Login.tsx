@@ -1,11 +1,11 @@
 import type React from "react";
-import { useState, type JSX } from "react";
+import { useEffect, useState, type JSX } from "react";
 import { NavLink, useNavigate } from "react-router";
 import { createUrl } from "../../utils";
 import type { ResponseApi } from "../../response-types";
 import { HiOutlineXMark } from "react-icons/hi2";
+import { validateSession } from "../../functions/fetchtils";
 
-const inputFieldClass: string = "border-2 w-50 h-10"; 
 const formInputNames = {
     username: "username",
     password: "password",
@@ -14,6 +14,8 @@ const formInputNames = {
 export default function Login(): JSX.Element{
     const [loginStatus, setLoginStatus]= useState<null|boolean>(null);
     const navigate = useNavigate();
+
+    useRedirectSessionValidation();
 
     return (
         <> 
@@ -31,7 +33,7 @@ export default function Login(): JSX.Element{
                 }}
                 className="flex flex-col gap-1 items-center">
                     {loginStatus != null && !loginStatus &&
-                        <div className="flex border-2 h-15 items-center justify-center bg-red-700/60">
+                        <div className="flex border-2 h-1 items-center justify-center bg-red-700/60">
                             <div className="px-5">
                                 <div className="flex gap-2 justify-between items-center">
                                     <p>
@@ -48,10 +50,10 @@ export default function Login(): JSX.Element{
                     }
                     <div className="flex flex-col gap-1 items-center justify-center">
                         <div className="flex flex-col">
-                            <input name={formInputNames.username} type="text" className={inputFieldClass} />
+                            <input name={formInputNames.username} type="text" className={"user-input-field"} />
                         </div>
                         <div className="flex flex-col">
-                            <input name={formInputNames.password} type="password" className={inputFieldClass} />
+                            <input name={formInputNames.password} type="password" className={"user-input-field"} />
                         </div>
                         <div className="flex w-full justify-center">
                             <button 
@@ -105,6 +107,26 @@ async function login(formEvent: React.SubmitEvent<HTMLFormElement>): Promise<boo
     }
 
     return apiRes.output
+}
+
+/**
+ * A hook used to validate the session ID from the cookie.
+ * If the validation fails, nothing will be done. If it succeeds,
+ * it will redirect to the authenticated storage page.
+ */
+function useRedirectSessionValidation(){
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        validateSession().then(status => {
+            // TODO: console dot log (real logging please)
+            // temporary for now just to validate
+            console.log(status);
+            if(status){
+                navigate("/storage"); 
+            }
+        });
+    }, [])
 }
 
 /**
