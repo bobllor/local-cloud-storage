@@ -13,19 +13,21 @@ const (
 )
 
 type ApiHandler struct {
-	UserHandler *UserHandler
-	FileHandler *FileHandler
-	gateway     *dbcon.Gateway
-	log         *gologger.Logger
+	UserHandler    *UserHandler
+	FileHandler    *FileHandler
+	SessionHandler *SessionHandler
+	gateway        *dbcon.Gateway
+	log            *gologger.Logger
 }
 
 // NewApiHandler creates a new Api struct.
 func NewApiHandler(gw *dbcon.Gateway, logger *gologger.Logger) *ApiHandler {
 	api := &ApiHandler{
-		UserHandler: NewUserHandler(gw, logger),
-		FileHandler: NewFileHandler(gw, logger),
-		gateway:     gw,
-		log:         logger,
+		UserHandler:    NewUserHandler(gw, logger),
+		FileHandler:    NewFileHandler(gw, logger),
+		SessionHandler: NewSessionHandler(gw, logger),
+		gateway:        gw,
+		log:            logger,
 	}
 
 	return api
