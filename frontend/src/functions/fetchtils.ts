@@ -18,17 +18,19 @@ export async function validateSession(): Promise<boolean>{
  * Sends a request to the given path and returns the response.
  * If args are used, it will send the data with args.
  * 
- * @param path The path of the request URL
+ * @param path The non-base request URL, this can include the forward slash
  * @param method The method used on the request
- * @param body A BodyInit object used to pass data to the backend
+ * @param body Any object that is being sent to the backend
  * @returns Response promise
  */
-export async function request(path: string, method: string = "GET", body?: BodyInit): Promise<Response>{
-    const res = await fetch(path, {
+export async function request(path: string, method: method = "GET", data?: {}): Promise<Response>{
+    const res = await fetch(createUrl(path), {
         method: method,
-        body: !body ? undefined : JSON.stringify(body),
+        body: !data ? undefined : JSON.stringify(data),
         credentials: "include",
     })
 
     return res;
 }
+
+export type method = "GET" | "POST";
