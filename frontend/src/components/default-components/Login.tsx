@@ -1,10 +1,9 @@
 import type React from "react";
 import { useEffect, useState, type JSX } from "react";
 import { NavLink, useNavigate } from "react-router";
-import { createUrl } from "../../utils";
 import type { ResponseApi } from "../../response-types";
 import { HiOutlineXMark } from "react-icons/hi2";
-import { validateSession } from "../../functions/fetchtils";
+import { request, validateSession } from "../../functions/fetchtils";
 
 const formInputNames = {
     username: "username",
@@ -85,21 +84,8 @@ async function login(formEvent: React.SubmitEvent<HTMLFormElement>): Promise<boo
     formEvent.preventDefault();
 
     const formData: FormData = new FormData(formEvent.currentTarget);
-    const userData = {username: "", password: ""}
-    formData.forEach((v, k) => {
-        if(k == formInputNames.username){
-            userData.username = v.toString();
-        }else{
-            userData.password = v.toString();
-        }
-    })
 
-    // TODO: log this
-    const res = await fetch(createUrl("/api/login"), {
-        method: "POST",
-        body: JSON.stringify(userData),
-        credentials: "include",
-    });
+    const res = await request("/api/login", "POST", JSON.stringify(formData));
 
     const apiRes: ResponseApi<boolean> = await res.json()
     if(apiRes.status == "error"){
