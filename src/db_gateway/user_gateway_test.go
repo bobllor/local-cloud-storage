@@ -1,6 +1,7 @@
 package dbgateway
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/bobllor/assert"
@@ -137,6 +138,68 @@ func TestGetUserBySessionID(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Nil(t, ua)
 	})
+}
+
+func TestValidateUsername(t *testing.T) {
+	cases := []string{
+		"abcdef.1",
+		"a234567",
+		"lolxdf",
+		"usernamegoeshere",
+		"username.goes.here",
+	}
+
+	for _, c := range cases {
+		err := newTestUserGateway(t).validateUsername(c)
+
+		assert.Nil(t, err)
+	}
+}
+
+func TestValidateUsernameError(t *testing.T) {
+	type cases struct {
+		Value string
+		Error error
+	}
+	testCases := []cases{
+		{
+			Value: "12345a",
+			Error: UsernameInvalidFirstCharErr,
+		},
+		{
+			Value: "_12345a",
+			Error: UsernameInvalidFirstCharErr,
+		},
+		{
+			Value: "asd fgh",
+			Error: UsernameIsInvalidErr,
+		},
+		{
+			Value: "asdf",
+			Error: UsernameLenOutOfRangeErr,
+		},
+		{
+			Value: "asdf][]h/;',.",
+			Error: UsernameInvalidEndCharErr,
+		},
+		{
+			Value: "abde..dsfd",
+			Error: UsernameIsInvalidErr,
+		},
+		{
+			Value: "abcde..sdfa.fff..s123",
+			Error: UsernameIsInvalidErr,
+		},
+	}
+
+	ug := newTestUserGateway(t)
+
+	for _, c := range testCases {
+		err := ug.validateUsername(c.Value)
+
+		assert.NotNil(t, err)
+		assert.True(t, errors.Is(err, c.Error))
+	}
 }
 
 func newTestUserGateway(t *testing.T) *UserGateway {
