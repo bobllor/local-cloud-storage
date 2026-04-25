@@ -3,6 +3,8 @@ package dbgateway
 import (
 	"database/sql"
 	"fmt"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/bobllor/cloud-project/src/hasher"
@@ -31,11 +33,29 @@ func NewUserGateway(db *sql.DB, deps *utils.Deps) *UserGateway {
 // that was created in the database, or an error if one occurred.
 //
 // The password is stored as the PHC string from the password hashing function.
+//
+// If the username and password fails to validate, it will return an error that is one of
+// password or username validation error. There are helper functions that determine the error
+// type.
+// Generic errors are returned if an unexpected error occurred during normal processing.
 func (ug *UserGateway) AddUser(username string, password string) (*user.UserAccount, error) {
 	accountID := uuid.NewString()
 	raw, err := hasher.Hash(password, nil, hasher.DefaultArgon2Params)
 	if err != nil {
+		ug.deps.Log.Criticalf("Failed to hash password: %v", err)
 		return nil, fmt.Errorf("failed to hash password: %v", err)
+	}
+
+	err = ug.validateUsername(username)
+	if err != nil {
+		if IsUsernameError(err) {
+			ug.deps.Log.Infof("Failed to validate username: %v", err)
+			// the error is used to display on the frontend
+			return nil, err
+		} else {
+			ug.deps.Log.Criticalf("Username validation had an error: %v", err)
+			return nil, fmt.Errorf("an unknown error occurred")
+		}
 	}
 
 	hashRes := raw.Encode()
@@ -70,6 +90,67 @@ func (ug *UserGateway) AddUser(username string, password string) (*user.UserAcco
 	logResultRows(ug.deps.Log, res)
 
 	return acc, nil
+}
+
+const (
+	usernameMinLength = 6
+	usernameMaxLength = 32
+)
+
+// validateUsername validates the username. If it fails to validate, it will
+// return an error.
+//
+// All but one error will be of type ValidationError. The only generic error
+// that is returned is if the regex failed to compile.
+func (ug *UserGateway) validateUsername(username string) error {
+	if strings.TrimSpace(username) == "" {
+		return UsernameEmptyErr
+	}
+
+	if len(username) < usernameMinLength || len(username) > usernameMaxLength {
+		return UsernameLenOutOfRangeErr
+	}
+
+	firstChar := string(username[0])
+	lastChar := string(username[len(username)-1])
+
+	alphaOnlyRegex := "[A-Za-z]"
+	stat, err := regexp.MatchString(alphaOnlyRegex, firstChar)
+	if err != nil {
+		return fmt.Errorf("failed to compile regex: %v", err)
+	}
+	if !stat {
+		return UsernameInvalidFirstCharErr
+	}
+
+	alphaNumericRegex := "[A-Za-z0-9]"
+	stat, err = regexp.MatchString(alphaNumericRegex, lastChar)
+	if err != nil {
+		return fmt.Errorf("failed to compile regex: %v", err)
+	}
+	if !stat {
+		return UsernameInvalidEndCharErr
+	}
+
+	doublePeriodRegex := ".*[..]{2}.*"
+	stat, err = regexp.MatchString(doublePeriodRegex, username)
+	if err != nil {
+		return fmt.Errorf("failed to compile regex: %v", err)
+	}
+	if stat {
+		return UsernameIsInvalidErr
+	}
+
+	usernameRegex := `^([A-Za-z0-9.]+)$`
+	stat, err = regexp.MatchString(usernameRegex, username)
+	if err != nil {
+		return fmt.Errorf("failed to compile regex: %v", err)
+	}
+	if !stat {
+		return UsernameIsInvalidErr
+	}
+
+	return nil
 }
 
 // GetUserByUsername gets the user row based on the username.
