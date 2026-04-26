@@ -84,7 +84,8 @@ func (ug *UserGateway) AddUser(username string, password string) (*user.UserAcco
 
 	res, err := execQuery(ug.database, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("failed to execute query: %v | query: %s", err, query)
+		ug.deps.Log.Warnf("Failed to execute query: %v | query: %s", err, query)
+		return nil, err
 	}
 
 	logResultRows(ug.deps.Log, res)
