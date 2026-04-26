@@ -3,8 +3,11 @@ package dbgateway
 import (
 	"errors"
 	"fmt"
+
+	"github.com/go-sql-driver/mysql"
 )
 
+// Error used for username validation failures.
 var (
 	UsernameEmptyErr            = errors.New("username cannot be empty")
 	UsernameLenOutOfRangeErr    = fmt.Errorf("username must be between %d to %d characters long", usernameMinLength, usernameMaxLength)
@@ -34,5 +37,28 @@ func IsUsernameError(err error) bool {
 
 // IsPasswordError compares if the given error is a password validation error.
 func IsPasswordError(err error) bool {
+	return false
+}
+
+// IsDuplicateSqlError checks if the error is a SQL error that is a duplicate
+// entry error. This returns true if the error is a duplicate or a unique key
+// entry error.
+//
+// If the error is not a duplicate error, or if it is not a SQL error, then
+// it will be false.
+func IsDuplicateSqlError(err error) bool {
+	sqlErr, ok := err.(*mysql.MySQLError)
+	duplicateEntry := uint16(1062)
+
+	if !ok {
+		return false
+	}
+
+	// TODO: need to figure out other errors with duplicate entries
+
+	if sqlErr.Number == duplicateEntry {
+		return true
+	}
+
 	return false
 }
