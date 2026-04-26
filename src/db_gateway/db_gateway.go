@@ -166,7 +166,7 @@ func execQuery(db *sql.DB, query string, args ...any) (sql.Result, error) {
 	res, err := tx.Exec(query, args...)
 	if err != nil {
 		tx.Rollback()
-		return nil, fmt.Errorf("failed to execute %s: %v", query, err)
+		return nil, err
 	}
 
 	err = tx.Commit()
