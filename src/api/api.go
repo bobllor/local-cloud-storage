@@ -1,7 +1,6 @@
 package api
 
 import (
-	"errors"
 	"net/http"
 
 	dbcon "github.com/bobllor/cloud-project/src/db_gateway"
@@ -61,9 +60,8 @@ func (ah *ApiHandler) CreateAuthMiddleware(f func(http.ResponseWriter, *http.Req
 		sessionCookie, err := r.Cookie(CookieSessionKey)
 		WriteHeaders(w, r)
 		if err != nil {
-			newErr := errors.New("unauthorized access")
 			ah.log.Infof("Unauthorized access, no cookie found for %v", r.RemoteAddr)
-			WriteErrorResponse(w, newErr, http.StatusUnauthorized)
+			WriteErrorResponse(w, ErrorUnauthorizedMsg, http.StatusUnauthorized, ReasonUnauthorized)
 
 			return
 		}
@@ -71,14 +69,13 @@ func (ah *ApiHandler) CreateAuthMiddleware(f func(http.ResponseWriter, *http.Req
 		validSession, err := ah.gateway.Session.ValidateSession(sessionCookie.Value)
 		if err != nil {
 			ah.log.Criticalf("Validating session database query failed: %v", err)
-			WriteErrorResponse(w, err, http.StatusInternalServerError)
+			WriteErrorResponse(w, ErrorInternalErrorMsg, http.StatusInternalServerError, ReasonInternalError)
 			return
 		}
 
 		if !validSession {
-			sessionErr := errors.New("session ID is invalid")
 			ah.log.Infof("Invalid session ID, failed validation for %v", r.RemoteAddr)
-			WriteErrorResponse(w, sessionErr, http.StatusUnauthorized)
+			WriteErrorResponse(w, ErrorUnauthorizedMsg, http.StatusUnauthorized, ReasonUnauthorized)
 
 			return
 		}

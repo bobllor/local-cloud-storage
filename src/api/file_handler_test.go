@@ -103,6 +103,6 @@ func TestGetFilesBySessionAndParent(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, apiRes.Status, StatusError)
 
-		assert.Contains(t, apiRes.Error.Message, "invalid parent ID")
+		assert.Contains(t, apiRes.Error.Message, "Invalid")
 	})
 }

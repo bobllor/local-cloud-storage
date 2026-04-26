@@ -1,8 +1,6 @@
 package api
 
 import (
-	"errors"
-	"fmt"
 	"net/http"
 
 	dbgateway "github.com/bobllor/cloud-project/src/db_gateway"
@@ -43,20 +41,19 @@ func (fh *FileHandler) GetFiles(w http.ResponseWriter, r *http.Request) {
 	sesID := GetSessionFromCookie(r)
 	if sesID == "" {
 		fh.deps.Log.Info("No cookie found with request")
-		err := fmt.Errorf("no cookie found for %s in files", CookieSessionKey)
-		WriteErrorResponse(w, err, http.StatusBadRequest)
+		WriteErrorResponse(w, ErrorUnauthorizedMsg, http.StatusBadRequest, ReasonBadRequestData)
 		return
 	}
 
 	files, err := fh.gateway.File.GetFilesBySessionAndParentFolder(sesID, parentID)
 	if err == dbgateway.FileDoesNotExistErr {
-		fh.deps.Log.Infof("Given parent ID %s does not exist: %v", parentID, err)
-		WriteErrorResponse(w, errors.New("invalid parent ID"), http.StatusBadRequest)
+		fh.deps.Log.Infof("Given file ID %s does not exist: %v", parentID, err)
+		WriteErrorResponse(w, "Invalid file ID", http.StatusBadRequest, ReasonBadRequestData)
 		return
 	}
 	if err != nil {
 		fh.deps.Log.Criticalf("Failed to retrieve files with session ID and parent folder ID: %v", err)
-		WriteErrorResponse(w, errors.New("an unknwon error has occurred"), http.StatusInternalServerError)
+		WriteErrorResponse(w, ErrorInternalErrorMsg, http.StatusInternalServerError, ReasonInternalError)
 		return
 	}
 
@@ -64,7 +61,7 @@ func (fh *FileHandler) GetFiles(w http.ResponseWriter, r *http.Request) {
 	n, err := WriteResponse(w, res)
 	if err != nil {
 		fh.deps.Log.Criticalf("Failed to write response to client: %v", err)
-		WriteErrorResponse(w, errors.New("an unknown error has occurred"), http.StatusInternalServerError)
+		WriteErrorResponse(w, ErrorInternalErrorMsg, http.StatusInternalServerError, ReasonInternalError)
 		return
 	}
 

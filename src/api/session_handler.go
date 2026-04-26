@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"net/http"
 
 	dbgateway "github.com/bobllor/cloud-project/src/db_gateway"
@@ -33,7 +32,8 @@ func (sh *SessionHandler) GetValidateSession(w http.ResponseWriter, r *http.Requ
 
 	status, err := sh.gateway.Session.ValidateSession(sesID)
 	if err != nil {
-		WriteErrorResponse(w, fmt.Errorf("server failed during session validation: %v", err), http.StatusInternalServerError)
+		sh.deps.Log.Criticalf("Error with validating session: %v", err)
+		WriteErrorResponse(w, ErrorInternalErrorMsg, http.StatusInternalServerError, ReasonInternalError)
 		return
 	}
 
