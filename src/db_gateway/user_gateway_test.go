@@ -63,7 +63,7 @@ func TestCheckCredentialsInvalid(t *testing.T) {
 
 func TestAddUser(t *testing.T) {
 	ugw := newTestUserGateway(t)
-	username := "a user here"
+	username := "auser.here"
 	password := "somepasswordhere"
 
 	acc, err := ugw.AddUser(username, password)
@@ -75,7 +75,7 @@ func TestAddUser(t *testing.T) {
 
 func TestAddUserComparePassword(t *testing.T) {
 	ugw := newTestUserGateway(t)
-	username := "a user here"
+	username := "a.userhere"
 	password := "somepasswordhere"
 
 	acc, err := ugw.AddUser(username, password)
