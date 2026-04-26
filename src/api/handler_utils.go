@@ -15,15 +15,10 @@ type HandlerMap map[string]func(http.ResponseWriter, *http.Request)
 
 type Handler interface{}
 
-// WriteErrorResponse is a helper function used to write an error if one occurred to
+// WriteErrorResponse is a helper function used to write an error to
 // the ResponseWriter.
-// This does not check if err != nil. If err == nil then this will do nothing.
-func WriteErrorResponse(w http.ResponseWriter, err error, statusCode int) {
-	if err == nil {
-		return
-	}
-
-	errRes := NewApiResponseError(statusCode, err.Error())
+func WriteErrorResponse(w http.ResponseWriter, msg string, statusCode int, reason ReasonCode) {
+	errRes := NewApiResponseError(statusCode, msg, reason)
 
 	b, err := json.Marshal(errRes)
 	// if err is not nil, then default to a basic value.
