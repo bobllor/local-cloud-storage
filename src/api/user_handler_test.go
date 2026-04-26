@@ -20,33 +20,56 @@ import (
 func TestPostRegisterUser(t *testing.T) {
 	sv := getTestServer(t)
 	gw, db := getGatewayDb(t)
+	username := "john.doe"
 
 	uh := NewUserHandler(gw, tests.NewTestLogger())
 	sv.RegisterHandlerFunc(UserPostRegisterRoute, uh.PostRegisterUser)
 
 	mSv := httptest.NewServer(sv.Handler)
 	defer mSv.Close()
-	url := mSv.URL
+	url := mSv.URL + "/api/register"
 	c := mSv.Client()
 
-	b, err := json.Marshal(map[string]string{"username": "john.doe", "password": "apasswordhere"})
-	assert.Nil(t, err)
+	t.Run("Normal registration", func(t *testing.T) {
+		t.Cleanup(func() {
+			_, err := dbcon.DropRows(db, user.TableName, user.ColumnUsername, username)
+			assert.Nil(t, err)
+		})
 
-	res, err := c.Post(url+"/api/register", ContentJson, bytes.NewBuffer(b))
-	assert.Nil(t, err)
-	assert.True(t, res.StatusCode < 300 && res.StatusCode >= 200)
+		b, err := json.Marshal(map[string]string{"username": username, "password": "apasswordhere"})
+		assert.Nil(t, err)
 
-	var apres ApiResponse
-	err = json.NewDecoder(res.Body).Decode(&apres)
-	assert.Nil(t, err)
-	assert.NotNil(t, apres)
+		res, err := c.Post(url, ContentJson, bytes.NewBuffer(b))
+		assert.Nil(t, err)
+		assert.True(t, res.StatusCode <= http.StatusBadRequest)
+		defer res.Body.Close()
 
-	ses := apres.Output.(map[string]any)
+		var apres ApiResponse
+		err = json.NewDecoder(res.Body).Decode(&apres)
+		assert.Nil(t, err)
+		assert.NotNil(t, apres)
 
-	_, err = dbcon.DropRows(db, user.TableName, user.ColumnAccountID, ses["AccountID"])
-	assert.Nil(t, err)
+		assert.Equal(t, len(res.Cookies()), 1)
+		assert.NotNil(t, apres.Output)
+	})
 
-	defer res.Body.Close()
+	t.Run("Duplicate registration", func(t *testing.T) {
+		b, err := json.Marshal(map[string]string{"username": tests.DbRowInfo.Username, "password": "whatever"})
+		assert.Nil(t, err)
+
+		res, err := c.Post(url, ContentJson, bytes.NewBuffer(b))
+		assert.Nil(t, err)
+		assert.Equal(t, res.StatusCode, http.StatusBadRequest)
+		defer res.Body.Close()
+
+		var apres ApiResponse
+		err = json.NewDecoder(res.Body).Decode(&apres)
+		assert.Nil(t, err)
+
+		assert.Equal(t, apres.Status, StatusError)
+		assert.Equal(t, apres.Error.Code, http.StatusBadRequest)
+		assert.Equal(t, apres.Error.Reason, ReasonUserAlreadyExists)
+	})
 }
 
 func TestLoginUser(t *testing.T) {
