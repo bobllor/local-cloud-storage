@@ -1,9 +1,8 @@
 import type React from "react";
 import { useEffect, useState, type JSX } from "react";
 import { NavLink, useNavigate } from "react-router";
-import type { ResponseApi } from "../../response-types";
 import { HiOutlineXMark } from "react-icons/hi2";
-import { request, validateSession } from "../../functions/fetchtils";
+import { fetchApi, validateSession } from "../../functions/fetchtils";
 
 const formInputNames = {
     username: "username",
@@ -84,15 +83,19 @@ async function login(formEvent: React.SubmitEvent<HTMLFormElement>): Promise<boo
     formEvent.preventDefault();
 
     const formData: FormData = new FormData(formEvent.currentTarget);
+    const reqObj: Record<string, any> = {};
 
-    const res = await request("/api/login", "POST", JSON.stringify(formData));
+    formData.forEach((v, k) => {
+        reqObj[k] = v;
+    });
 
-    const apiRes: ResponseApi<boolean> = await res.json()
-    if(apiRes.status == "error"){
-        return false
+    const res = await fetchApi<boolean>("/api/login", "POST", reqObj);
+
+    if(res.status == "error"){
+        return false;
     }
 
-    return apiRes.output
+    return res.output;
 }
 
 /**
