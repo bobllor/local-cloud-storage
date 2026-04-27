@@ -16,6 +16,13 @@ var (
 	UsernameIsInvalidErr        = errors.New("username may only consist of alphanumeric characters and single periods")
 )
 
+// Error used for password validation faillures.
+var (
+	PasswordEmptyErr         = errors.New("password cannot be empty")
+	PasswordNotEqualErr      = errors.New("passwords do not match")
+	PasswordLenOutOfRangeErr = fmt.Errorf("password must be between %d to %d characters long", passwordMinLength, passwordMaxLength)
+)
+
 // IsUsernameError compares if the given error is a username validation error.
 func IsUsernameError(err error) bool {
 	errs := []error{
@@ -37,6 +44,18 @@ func IsUsernameError(err error) bool {
 
 // IsPasswordError compares if the given error is a password validation error.
 func IsPasswordError(err error) bool {
+	errs := []error{
+		PasswordEmptyErr,
+		PasswordLenOutOfRangeErr,
+		PasswordNotEqualErr,
+	}
+
+	for _, e := range errs {
+		if errors.Is(err, e) {
+			return true
+		}
+	}
+
 	return false
 }
 
