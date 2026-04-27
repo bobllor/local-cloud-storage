@@ -70,6 +70,8 @@ func GetSessionFromCookie(r *http.Request) string {
 }
 
 // SetCookieSession sets the cookie for the session.
+// If the session already exists in the cookie, then it will overwrite the
+// cookie's value.
 func SetCookieSession(w http.ResponseWriter, s *session.Session) {
 	c := http.Cookie{
 		Name:     CookieSessionKey,
