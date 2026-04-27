@@ -1,10 +1,10 @@
 import { createContext, redirect, type LoaderFunction, type MiddlewareFunction } from "react-router";
-import { createUrl } from "./utils";
 import type { ResponseApi } from "./response-types";
+import { fetchApi } from "./functions/fetchtils";
 
 export const userContext = createContext<User|null>(null);
 
-type User = {
+export type User = {
     account_id: string
     username: string
     created_on: Date
@@ -25,7 +25,7 @@ export const authMiddleware: MiddlewareFunction = async ({context}) => {
     const user = await getUser();
 
     if(!user){
-        throw redirect("/login")
+        throw redirect("/login");
     }
 
     // TODO: log res not in console.log
@@ -41,10 +41,7 @@ export const authMiddleware: MiddlewareFunction = async ({context}) => {
  * bypassing the login page.
  */
 export const loginMiddleware: MiddlewareFunction = async () => {
-    const res: ResponseApi<User> = await fetch(createUrl("/api/user"), {
-        method: "GET",
-        credentials: "include",
-    }).then(val => val.json());
+    const res: ResponseApi<User> = await fetchApi("/api/user", "GET");
 
     if(res.status == "success"){
         throw redirect("/storage");
@@ -58,10 +55,7 @@ export const getUserContext: LoaderFunction = async ({context}) => {
 }
 
 export async function getUser(): Promise<User|null>{
-    const res: ResponseApi<User> = await fetch(createUrl("/api/user"), {
-        method: "GET",
-        credentials: "include",
-    }).then(val => val.json());
+    const res: ResponseApi<User> = await fetchApi("/api/user", "GET");
 
     if (res.status == "error"){
         return null;
