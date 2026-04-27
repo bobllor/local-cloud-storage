@@ -10,7 +10,7 @@ import (
 // Error used for username validation failures.
 var (
 	UsernameEmptyErr            = errors.New("username cannot be empty")
-	UsernameLenOutOfRangeErr    = fmt.Errorf("username must be between %d to %d characters long", usernameMinLength, usernameMaxLength)
+	UsernameLenOutOfRangeErr    = fmt.Errorf("username must be between %d to %d characters long", USERNAME_MIN_LENGTH, USERNAME_MAX_LENGTH)
 	UsernameInvalidFirstCharErr = errors.New("username must start with a letter")
 	UsernameInvalidEndCharErr   = errors.New("username must end with an alphanumeric character")
 	UsernameIsInvalidErr        = errors.New("username may only consist of alphanumeric characters and single periods")
@@ -20,7 +20,7 @@ var (
 var (
 	PasswordEmptyErr         = errors.New("password cannot be empty")
 	PasswordNotEqualErr      = errors.New("passwords do not match")
-	PasswordLenOutOfRangeErr = fmt.Errorf("password must be between %d to %d characters long", passwordMinLength, passwordMaxLength)
+	PasswordLenOutOfRangeErr = fmt.Errorf("password must be between %d to %d characters long", PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH)
 )
 
 // IsUsernameError compares if the given error is a username validation error.

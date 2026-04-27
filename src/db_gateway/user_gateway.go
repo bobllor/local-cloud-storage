@@ -94,8 +94,8 @@ func (ug *UserGateway) AddUser(username string, password string) (*user.UserAcco
 }
 
 const (
-	usernameMinLength = 6
-	usernameMaxLength = 32
+	USERNAME_MIN_LENGTH = 6
+	USERNAME_MAX_LENGTH = 32
 )
 
 // validateUsername validates the username. If it fails to validate, it will
@@ -108,7 +108,7 @@ func (ug *UserGateway) validateUsername(username string) error {
 		return UsernameEmptyErr
 	}
 
-	if len(username) < usernameMinLength || len(username) > usernameMaxLength {
+	if len(username) < USERNAME_MIN_LENGTH || len(username) > USERNAME_MAX_LENGTH {
 		return UsernameLenOutOfRangeErr
 	}
 
@@ -157,8 +157,8 @@ func (ug *UserGateway) validateUsername(username string) error {
 }
 
 const (
-	passwordMinLength = 8
-	passwordMaxLength = 64
+	PASSWORD_MIN_LENGTH = 8
+	PASSWORD_MAX_LENGTH = 64
 )
 
 // validatePassword validates the password. If it fails to validate, it will
@@ -171,7 +171,7 @@ func (ug *UserGateway) validatePassword(pw string, confirmPw string) error {
 		return PasswordEmptyErr
 	}
 
-	if len(pw) < passwordMinLength || len(pw) > passwordMaxLength {
+	if len(pw) < PASSWORD_MIN_LENGTH || len(pw) > PASSWORD_MAX_LENGTH {
 		return PasswordLenOutOfRangeErr
 	}
 
