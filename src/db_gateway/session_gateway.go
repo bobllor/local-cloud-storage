@@ -124,11 +124,14 @@ func (sg *SessionGateway) UpsertSession(accountID string) (*session.Session, err
 
 	query = query + " " + "VALUES" + placeholder + " " + duplicateStr
 
-	_, err := execQuery(sg.database, query, args...)
+	res, err := execQuery(sg.database, query, args...)
 	if err != nil {
 		sg.deps.Log.Warnf("Failed to execute query: %s | Values: %v", query, args)
 		return nil, err
 	}
+
+	sg.deps.Log.Info("Successfully upsert session")
+	logResultRows(sg.deps.Log, res)
 
 	return &ses, nil
 }
