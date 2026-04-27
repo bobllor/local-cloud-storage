@@ -202,6 +202,51 @@ func TestValidateUsernameError(t *testing.T) {
 	}
 }
 
+func TestValidatePassword(t *testing.T) {
+	type cases struct {
+		Password        string
+		ConfirmPassword string
+		Error           error
+	}
+
+	ug := newTestUserGateway(t)
+	tCases := []cases{
+		{
+			Password:        "abcdef!@#@",
+			ConfirmPassword: "abcdef!@#@",
+		},
+		{
+			Password:        "testPassWORD123$$!!",
+			ConfirmPassword: "testPassWORD123$$!!",
+		},
+		{
+			Password:        "wrongIncorrect",
+			ConfirmPassword: "fdsa12345",
+			Error:           PasswordNotEqualErr,
+		},
+		{
+			Password:        "valu",
+			ConfirmPassword: "valu",
+			Error:           PasswordLenOutOfRangeErr,
+		},
+		{
+			Password:        "",
+			ConfirmPassword: "",
+			Error:           PasswordEmptyErr,
+		},
+	}
+
+	for _, c := range tCases {
+		err := ug.validatePassword(c.Password, c.ConfirmPassword)
+		if c.Error != nil {
+			assert.NotNil(t, err)
+			assert.True(t, IsPasswordError(err))
+		} else {
+			assert.Nil(t, err)
+		}
+	}
+}
+
 func newTestUserGateway(t *testing.T) *UserGateway {
 	cnf := newTestDBConfig()
 	db, err := NewDatabase(cnf)
