@@ -16,6 +16,9 @@ var (
 	// ReasonBadUsername is used to indicate the given username failed validation.
 	ReasonBadUsername ReasonCode = "BAD_USERNAME"
 
+	// ReasonBadPassword is used to indicate the given password failed validation.
+	ReasonBadPassword ReasonCode = "BAD_PASSWORD"
+
 	// ReasonUnauthorized is used for unauthenticated requests.
 	ReasonUnauthorized ReasonCode = "UNAUTHORIZED"
 )
