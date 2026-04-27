@@ -249,8 +249,8 @@ func getReflectValue(v reflect.Value) reflect.Value {
 func logResultRows(log *gologger.Logger, res sql.Result) {
 	n, err := res.RowsAffected()
 	if err != nil {
-		log.Warnf("failed to check row results: %v", err)
+		log.Warnf("Failed to check row results: %v", err)
 	} else {
-		log.Infof("affected rows: %d", n)
+		log.Infof("Affected rows: %d", n)
 	}
 }
