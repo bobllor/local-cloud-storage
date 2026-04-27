@@ -101,8 +101,8 @@ const (
 // validateUsername validates the username. If it fails to validate, it will
 // return an error.
 //
-// All but one error will be of type ValidationError. The only generic error
-// that is returned is if the regex failed to compile.
+// Errors will be a password validation error or a generic error if the regex
+// compile fails.
 func (ug *UserGateway) validateUsername(username string) error {
 	if strings.TrimSpace(username) == "" {
 		return UsernameEmptyErr
@@ -116,6 +116,10 @@ func (ug *UserGateway) validateUsername(username string) error {
 	lastChar := string(username[len(username)-1])
 
 	alphaOnlyRegex := "[A-Za-z]"
+	alphaNumericRegex := "[A-Za-z0-9]"
+	// used to prevent double periods in the username
+	doublePeriodRegex := ".*[..]{2}.*"
+
 	stat, err := regexp.MatchString(alphaOnlyRegex, firstChar)
 	if err != nil {
 		return fmt.Errorf("failed to compile regex: %v", err)
@@ -124,7 +128,6 @@ func (ug *UserGateway) validateUsername(username string) error {
 		return UsernameInvalidFirstCharErr
 	}
 
-	alphaNumericRegex := "[A-Za-z0-9]"
 	stat, err = regexp.MatchString(alphaNumericRegex, lastChar)
 	if err != nil {
 		return fmt.Errorf("failed to compile regex: %v", err)
@@ -133,7 +136,6 @@ func (ug *UserGateway) validateUsername(username string) error {
 		return UsernameInvalidEndCharErr
 	}
 
-	doublePeriodRegex := ".*[..]{2}.*"
 	stat, err = regexp.MatchString(doublePeriodRegex, username)
 	if err != nil {
 		return fmt.Errorf("failed to compile regex: %v", err)
@@ -149,6 +151,32 @@ func (ug *UserGateway) validateUsername(username string) error {
 	}
 	if !stat {
 		return UsernameIsInvalidErr
+	}
+
+	return nil
+}
+
+const (
+	passwordMinLength = 8
+	passwordMaxLength = 64
+)
+
+// validatePassword validates the password. If it fails to validate, it will
+// return an error.
+//
+// Errors will be a password validation error or a generic error if the regex
+// compile fails.
+func (ug *UserGateway) validatePassword(pw string, confirmPw string) error {
+	if pw == "" {
+		return PasswordEmptyErr
+	}
+
+	if len(pw) < passwordMinLength || len(pw) > passwordMaxLength {
+		return PasswordLenOutOfRangeErr
+	}
+
+	if pw != confirmPw {
+		return PasswordNotEqualErr
 	}
 
 	return nil
