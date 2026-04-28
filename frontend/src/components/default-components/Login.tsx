@@ -1,8 +1,9 @@
 import type React from "react";
-import { useEffect, useState, type JSX } from "react";
+import { useState, type JSX } from "react";
 import { NavLink, useNavigate } from "react-router";
 import { HiOutlineXMark } from "react-icons/hi2";
-import { fetchApi, validateSession } from "../../functions/fetchtils";
+import { fetchApi } from "../../functions/fetchtils";
+import { useSessionValidation } from "./hooks";
 
 const formInputNames = {
     username: "username",
@@ -13,7 +14,7 @@ export default function Login(): JSX.Element{
     const [loginStatus, setLoginStatus]= useState<null|boolean>(null);
     const navigate = useNavigate();
 
-    useRedirectSessionValidation();
+    useSessionValidation();
 
     return (
         <> 
@@ -96,26 +97,6 @@ async function login(formEvent: React.SubmitEvent<HTMLFormElement>): Promise<boo
     }
 
     return res.output;
-}
-
-/**
- * A hook used to validate the session ID from the cookie.
- * If the validation fails, nothing will be done. If it succeeds,
- * it will redirect to the authenticated storage page.
- */
-function useRedirectSessionValidation(){
-    const navigate = useNavigate();
-
-    useEffect(() => {
-        validateSession().then(status => {
-            // TODO: console dot log (real logging please)
-            // temporary for now just to validate
-            console.log(status);
-            if(status){
-                navigate("/storage"); 
-            }
-        });
-    }, [])
 }
 
 /**
