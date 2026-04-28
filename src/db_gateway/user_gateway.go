@@ -273,18 +273,27 @@ func (ug *UserGateway) GetUserBySessionID(sessionID string) (*user.UserAccountNo
 		return nil, err
 	}
 
-	query, args, err := sqlquery.Select(
+	query, _, err := sqlquery.Select(
 		user.TableName,
 		user.ColumnAccountID,
 		user.ColumnUsername,
 		user.ColumnCreatedOn,
 		user.ColumnActive,
-	).Where().Exists(sQuery, sArgs...).Build()
+	).Build()
 	if err != nil {
 		return nil, err
 	}
 
-	rows, err := ug.database.Query(query, args...)
+	query = fmt.Sprintf(`
+		%s 
+		WHERE %s IN (%s)
+		`,
+		query,
+		user.ColumnAccountID,
+		sQuery,
+	)
+
+	rows, err := ug.database.Query(query, sArgs...)
 	if err != nil {
 		ug.deps.Log.Criticalf("Failed to execute query: %v | query: %s", err, query)
 		return nil, err
