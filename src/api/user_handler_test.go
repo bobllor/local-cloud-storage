@@ -70,6 +70,37 @@ func TestPostRegisterUser(t *testing.T) {
 		assert.Equal(t, apres.Error.Code, http.StatusBadRequest)
 		assert.Equal(t, apres.Error.Reason, ReasonUserAlreadyExists)
 	})
+
+	t.Run("Registration cookie overwrite", func(t *testing.T) {
+		username := "new.userexample"
+
+		b, err := json.Marshal(map[string]string{"username": username, "password": "testing1234"})
+		assert.Nil(t, err)
+
+		t.Cleanup(func() {
+			dbcon.DropRows(db, user.TableName, user.ColumnUsername, username)
+		})
+
+		req, err := http.NewRequest("POST", url, bytes.NewBuffer(b))
+		req.AddCookie(&http.Cookie{
+			Name:  CookieSessionKey,
+			Value: tests.DbRowInfo.SessionID,
+		})
+		assert.Equal(t, len(req.Cookies()), 1)
+
+		res, err := c.Do(req)
+		assert.Nil(t, err)
+
+		var apiRes ApiResponse
+		err = json.NewDecoder(res.Body).Decode(&apiRes)
+		assert.Nil(t, err)
+
+		assert.True(t, apiRes.Status == StatusSuccess)
+		assert.NotNil(t, apiRes.Output)
+		assert.Equal(t, len(res.Cookies()), 1)
+
+		assert.NotEqual(t, res.Cookies()[0], tests.DbRowInfo.SessionID)
+	})
 }
 
 func TestLoginUser(t *testing.T) {
@@ -116,6 +147,7 @@ func TestLoginUser(t *testing.T) {
 
 		assert.Equal(t, v.Status, StatusSuccess)
 		assert.Equal(t, v.Output, true)
+		assert.Equal(t, len(res.Cookies()), 1)
 	})
 
 	t.Run("Login Fail", func(t *testing.T) {
