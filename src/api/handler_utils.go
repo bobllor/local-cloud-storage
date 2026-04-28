@@ -3,8 +3,6 @@ package api
 import (
 	"encoding/json"
 	"net/http"
-
-	"github.com/bobllor/cloud-project/src/session"
 )
 
 const (
@@ -72,10 +70,10 @@ func GetSessionFromCookie(r *http.Request) string {
 // SetCookieSession sets the cookie for the session.
 // If the session already exists in the cookie, then it will overwrite the
 // cookie's value.
-func SetCookieSession(w http.ResponseWriter, s *session.Session) {
+func SetCookieSession(w http.ResponseWriter, id string) {
 	c := http.Cookie{
 		Name:     CookieSessionKey,
-		Value:    s.SessionID,
+		Value:    id,
 		Path:     "/",
 		MaxAge:   3600,
 		HttpOnly: true,

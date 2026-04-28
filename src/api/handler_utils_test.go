@@ -36,7 +36,7 @@ func TestSetCookie(t *testing.T) {
 		ExpireOn:  time.Now().UTC(),
 	}
 
-	SetCookieSession(w, &s)
+	SetCookieSession(w, s.SessionID)
 
 	cookies := w.Result().Cookies()
 

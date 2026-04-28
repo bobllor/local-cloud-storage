@@ -80,6 +80,7 @@ func (ah *ApiHandler) CreateAuthMiddleware(f func(http.ResponseWriter, *http.Req
 			return
 		}
 
+		SetCookieSession(w, sessionCookie.Value)
 		next.ServeHTTP(w, r)
 	})
 }
