@@ -88,6 +88,7 @@ func (ug *UserGateway) AddUser(username string, password string) (*user.UserAcco
 		return nil, err
 	}
 
+	ug.deps.Log.Infof("Successfully added user '%s'", username)
 	logResultRows(ug.deps.Log, res)
 
 	return acc, nil
