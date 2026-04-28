@@ -31,20 +31,7 @@ export type ResponseError = {
 }
 
 /**
- * Codes for ReasonCode values used to determine what error has occurred
- * with the response return.
- */
-export const REASON_CODES = {
-    internalError: "INTERNAL_ERROR",
-	badRequestData: "BAD_DATA",
-	userAlreadyExists: "USER_ALREADY_EXISTS",
-	badUsername: "BAD_USERNAME",
-	badPassword:"BAD_PASSWORD",
-	unauthorized: "UNAUTHORIZED",
-}
-
-/**
  * ReasonCode indicates what error type had occurred during the endpoint
  * call.
  */
-export type ReasonCode = keyof typeof REASON_CODES
+export type ReasonCode = "INTERNAL_ERROR" | "BAD_DATA" | "USER_ALREADY_EXISTS" | "BAD_USERNAME" | "BAD_PASSWORD" | "UNAUTHORIZED";
