@@ -1,5 +1,5 @@
 import type { ResponseApi } from "../response-types";
-import { createUrl } from "../utils";
+import { createUrl } from "../server-utils";
 
 /**
  * Sends a request to validate the current session. This sends
