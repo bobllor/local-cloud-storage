@@ -149,7 +149,31 @@ func TestValidateSession(t *testing.T) {
 		assert.Nil(t, err)
 		assert.False(t, stat)
 	})
+}
 
+func TestDeleteSessionRowByID(t *testing.T) {
+	sg := newTestSessionGateway(t)
+	ug := newTestUserGateway(t)
+	username := "another.test.username"
+
+	t.Cleanup(func() {
+		DropRows(sg.database, user.TableName, user.ColumnUsername, username)
+	})
+
+	user, err := ug.AddUser(username, "password1234")
+	assert.Nil(t, err)
+
+	ses, err := sg.UpsertSession(user.AccountID)
+	assert.Nil(t, err)
+
+	baseSes := ses.SessionID
+
+	err = sg.DeleteSessionByID(baseSes)
+	assert.Nil(t, err)
+
+	newSes, err := sg.GetSessionBySessionID(baseSes)
+	assert.Nil(t, err)
+	assert.NotEqual(t, newSes, baseSes)
 }
 
 func newTestSessionGateway(t *testing.T) *SessionGateway {

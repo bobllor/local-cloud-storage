@@ -173,6 +173,38 @@ func (sg *SessionGateway) ValidateSession(sessionID string) (bool, error) {
 	return true, nil
 }
 
+// DeleteSessionByID deletes the given session ID from the table. This
+//
+// If the session ID does not exist in the server, then this will do nothing.
+// Any errors that occur will be database related.
+//
+// This method does not remove the cookie from the client.
+func (sg *SessionGateway) DeleteSessionByID(sessionID string) error {
+	query := fmt.Sprintf(`
+		DELETE FROM %s 
+		WHERE %s = ?
+		`,
+		session.TableName,
+		session.ColumnSessionID,
+	)
+
+	res, err := execQuery(sg.database, query, sessionID)
+	if err != nil {
+		return fmt.Errorf("failed to delete from Session table: %v", err)
+	}
+
+	n, err := res.RowsAffected()
+	if err != nil {
+		if n == 0 {
+			sg.deps.Log.Info("No existing session ID found")
+		}
+	}
+
+	sg.deps.Log.Info("Successfully invalidated session ID")
+
+	return nil
+}
+
 // validateID validates the ID string formatting. It returns a true
 // if it is valid, otherwise it will return false.
 // This does not check the database.
