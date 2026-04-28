@@ -13,6 +13,7 @@ import (
 const (
 	UserPostRegisterRoute = "POST /api/register"
 	UserPostLoginRoute    = "POST /api/login"
+	UserPostLogoutRoute   = "POST /api/logout"
 	UserGetUserRoute      = "/api/user"
 )
 
@@ -132,7 +133,7 @@ func (uh *UserHandler) PostLogin(w http.ResponseWriter, r *http.Request) {
 		}
 
 		uh.deps.Log.Infof("Setting session data for user %s", ua.Username)
-		SetCookieSession(w, ses)
+		SetCookieSession(w, ses.SessionID)
 		_, err = WriteResponse(w, res)
 		if err != nil {
 			WriteErrorResponse(w, ErrorInternalErrorMsg, http.StatusInternalServerError, ReasonInternalError)
@@ -141,6 +142,30 @@ func (uh *UserHandler) PostLogin(w http.ResponseWriter, r *http.Request) {
 		err = fmt.Errorf("user %s does not exist", user.Username)
 		WriteErrorResponse(w, ErrorBadDataMsg, http.StatusBadRequest, ReasonBadRequestData)
 	}
+}
+
+// PostLogout is the handler for invalidating the user.
+// This requires the cookie for the session ID.
+//
+// The session ID will be deleted from the table and the cookie will be removed
+// from the browser.
+//
+// A boolean value will be returned to the response output if successful.
+func (uh *UserHandler) PostLogout(w http.ResponseWriter, r *http.Request) {
+	id := GetSessionFromCookie(r)
+	if id == "" {
+		WriteErrorResponse(w, ErrorUnauthorizedMsg, http.StatusBadRequest, ReasonUnauthorized)
+		return
+	}
+
+	err := uh.Gateway.Session.DeleteSessionByID(id)
+	if err != nil {
+		WriteErrorResponse(w, ErrorInternalErrorMsg, http.StatusInternalServerError, ReasonInternalError)
+		return
+	}
+
+	// TODO: finish this
+	SetCookie(w, CookieSessionKey, "")
 }
 
 // PostRegisterUser is the handler for registering users.
@@ -180,7 +205,7 @@ func (uh *UserHandler) PostRegisterUser(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	SetCookieSession(w, s)
+	SetCookieSession(w, s.SessionID)
 
 	a := NewApiResponse(true)
 	n, err := WriteResponse(w, a)
