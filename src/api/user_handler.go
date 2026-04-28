@@ -71,6 +71,7 @@ func (uh *UserHandler) GetUserBySessionID(w http.ResponseWriter, r *http.Request
 			return
 		}
 
+		uh.deps.Log.Info("User retrieved for valid session ID")
 		uh.deps.Log.Infof("Successfully written %d byte(s) to response", i)
 	}
 }
