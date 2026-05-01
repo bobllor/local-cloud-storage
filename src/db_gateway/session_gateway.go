@@ -173,7 +173,7 @@ func (sg *SessionGateway) ValidateSession(sessionID string) (bool, error) {
 	return true, nil
 }
 
-// DeleteSessionByID deletes the given session ID from the table. This
+// DeleteSessionByID deletes the given session ID from the table.
 //
 // If the session ID does not exist in the server, then this will do nothing.
 // Any errors that occur will be database related.
