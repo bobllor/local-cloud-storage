@@ -2,9 +2,11 @@ package api
 
 import (
 	"net/http"
+	"time"
 
 	dbcon "github.com/bobllor/cloud-project/src/db_gateway"
 	"github.com/bobllor/gologger"
+	"github.com/google/uuid"
 )
 
 const (
@@ -39,11 +41,21 @@ func (ah *ApiHandler) CreateRequestMiddleware(f func(http.ResponseWriter, *http.
 	next := http.HandlerFunc(f)
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// TODO: add more logging and things yeah.
+		requestID := uuid.New().String()
+
+		startTime := time.Now()
+		ah.log.Infof("Starting new request | id=%s,method=%s", requestID, r.Method)
 		ah.middlewareLogger(r)
 		WriteHeaders(w, r)
 
 		next.ServeHTTP(w, r)
+
+		finalTime := time.Since(startTime)
+		ah.log.Infof(
+			"Completed request | id=%s,time=%v seconds",
+			requestID,
+			finalTime.Seconds(),
+		)
 	})
 }
 

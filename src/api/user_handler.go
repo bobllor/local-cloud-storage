@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	dbcon "github.com/bobllor/cloud-project/src/db_gateway"
@@ -64,7 +63,7 @@ func (uh *UserHandler) GetUserBySessionID(w http.ResponseWriter, r *http.Request
 		WriteResponse(w, NewApiResponse(nil))
 	} else {
 		res := NewApiResponse(ua)
-		i, err := WriteResponse(w, res)
+		n, err := WriteResponse(w, res)
 		if err != nil {
 			uh.deps.Log.Warnf("failed to write response: %v", err)
 			WriteErrorResponse(w, ErrorInternalErrorMsg, http.StatusInternalServerError, ReasonInternalError)
@@ -72,8 +71,8 @@ func (uh *UserHandler) GetUserBySessionID(w http.ResponseWriter, r *http.Request
 			return
 		}
 
-		uh.deps.Log.Info("User retrieved for valid session ID")
-		uh.deps.Log.Infof("Successfully written %d byte(s) to response", i)
+		uh.deps.Log.Info("Completed user retrieval by session ID request")
+		logResponseBytes(uh.deps.Log, n)
 	}
 }
 
@@ -139,9 +138,11 @@ func (uh *UserHandler) PostLogin(w http.ResponseWriter, r *http.Request) {
 			WriteErrorResponse(w, ErrorInternalErrorMsg, http.StatusInternalServerError, ReasonInternalError)
 		}
 	} else {
-		err = fmt.Errorf("user %s does not exist", user.Username)
+		uh.deps.Log.Info("User does not exist")
 		WriteErrorResponse(w, ErrorBadDataMsg, http.StatusBadRequest, ReasonBadRequestData)
 	}
+
+	uh.deps.Log.Info("Completed login request")
 }
 
 // PostLogout is the handler for invalidating the user.
@@ -164,8 +165,16 @@ func (uh *UserHandler) PostLogout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: finish this
-	SetCookie(w, CookieSessionKey, "")
+	ExpireCookieSession(w)
+
+	n, err := WriteResponse(w, NewApiResponse(true))
+	if err != nil {
+		WriteErrorResponse(w, ErrorInternalErrorMsg, http.StatusInternalServerError, ReasonInternalError)
+		return
+	}
+
+	uh.deps.Log.Info("Completed logout request")
+	logResponseBytes(uh.deps.Log, n)
 }
 
 // PostRegisterUser is the handler for registering users.
@@ -215,5 +224,6 @@ func (uh *UserHandler) PostRegisterUser(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	uh.deps.Log.Infof("Wrote %d bytes to response for user registration", n)
+	uh.deps.Log.Info("Completed user registration request")
+	logResponseBytes(uh.deps.Log, n)
 }

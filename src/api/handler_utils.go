@@ -3,6 +3,8 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+
+	"github.com/bobllor/gologger"
 )
 
 const (
@@ -83,7 +85,27 @@ func SetCookieSession(w http.ResponseWriter, id string) {
 	http.SetCookie(w, &c)
 }
 
+// ExpireCookieSession sets MaxAge=0 for the cookie session key to the
+// ResponseWriter for the request.
+func ExpireCookieSession(w http.ResponseWriter) {
+	c := http.Cookie{
+		Name:     CookieSessionKey,
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+		Secure:   true,
+	}
+
+	http.SetCookie(w, &c)
+}
+
 // SetCookie sets the cookie with the given key and value to the headers.
 func SetCookie(w http.ResponseWriter, key string, value string) {
 
+}
+
+// logResponseBytes logs the bytes written to the response.
+func logResponseBytes(log *gologger.Logger, n int) {
+	log.Infof("Wrote %d bytes to response", n)
 }

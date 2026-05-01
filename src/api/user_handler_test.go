@@ -170,6 +170,73 @@ func TestLoginUser(t *testing.T) {
 	})
 }
 
+func TestLogoutUser(t *testing.T) {
+	gw, db := getGatewayDb(t)
+	api := NewApiHandler(gw, tests.NewTestLogger())
+	uh := NewUserHandler(gw, tests.NewTestLogger())
+	username := "this.is.ausername"
+	password := "password12345"
+
+	t.Cleanup(func() {
+		dbcon.DropRows(db, user.TableName, user.ColumnUsername, username)
+	})
+
+	mux := http.NewServeMux()
+	mux.Handle(UserPostLogoutRoute, api.CreateAuthMiddleware(uh.PostLogout))
+	mux.Handle(UserPostRegisterRoute, api.CreateRequestMiddleware(uh.PostRegisterUser))
+
+	tsv := httptest.NewServer(mux)
+	defer tsv.Close()
+
+	url := tsv.URL + "/api/logout"
+	tc := tsv.Client()
+
+	b, err := json.Marshal(RequestUserRegisterInfo{
+		Username:        username,
+		Password:        password,
+		ConfirmPassword: password,
+	})
+
+	res, err := tc.Post(tsv.URL+"/api/register", ContentJson, bytes.NewBuffer(b))
+	assert.Nil(t, err)
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer([]byte{}))
+	assert.Nil(t, err)
+	usr, err := gw.User.GetUserByUsername(username)
+	assert.Nil(t, err)
+	ses, err := gw.Session.GetSessionByAccountID(usr.AccountID)
+	assert.Nil(t, err)
+
+	baseAge := 3600
+	req.AddCookie(&http.Cookie{
+		Name:     CookieSessionKey,
+		Value:    ses.SessionID,
+		Path:     "/",
+		MaxAge:   baseAge,
+		Secure:   true,
+		HttpOnly: true,
+	})
+
+	res, err = tc.Do(req)
+	assert.Nil(t, err)
+
+	var apiRes ApiResponse
+	err = json.NewDecoder(res.Body).Decode(&apiRes)
+	assert.Nil(t, err)
+
+	assert.Equal(t, apiRes.Status, StatusSuccess)
+	assert.True(t, apiRes.Output.(bool))
+
+	cookie, err := res.Request.Cookie(CookieSessionKey)
+	assert.Nil(t, err)
+
+	assert.True(t, cookie.MaxAge <= 0)
+	assert.NotEqual(t, cookie.MaxAge, baseAge)
+
+	ses, err = gw.Session.GetSessionBySessionID(ses.SessionID)
+	assert.NilAll(t, err, ses)
+}
+
 // getTestServer creates a new Server test instance.
 func getTestServer(t *testing.T) *server.Server {
 	addr := ":8080"
