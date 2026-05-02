@@ -81,6 +81,7 @@ func main() {
 
 	serv.RegisterHandler(api.UserPostRegisterRoute, ap.CreateRequestMiddleware(ap.UserHandler.PostRegisterUser))
 	serv.RegisterHandler(api.UserPostLoginRoute, ap.CreateRequestMiddleware(ap.UserHandler.PostLogin))
+	serv.RegisterHandler(api.UserPostLogoutRoute, ap.CreateAuthMiddleware(ap.UserHandler.PostLogout))
 	serv.RegisterHandler(api.UserGetUserRoute, ap.CreateAuthMiddleware(ap.UserHandler.GetUserBySessionID))
 
 	// handles both dynamic and root based access
