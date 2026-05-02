@@ -40,23 +40,11 @@ func NewApiHandler(gw *dbcon.Gateway, logger *gologger.Logger) *ApiHandler {
 func (ah *ApiHandler) CreateRequestMiddleware(f func(http.ResponseWriter, *http.Request)) http.Handler {
 	next := http.HandlerFunc(f)
 
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requestID := uuid.New().String()
-
-		startTime := time.Now()
-		ah.log.Infof("Starting new request | id=%s,method=%s", requestID, r.Method)
-		ah.middlewareLogger(r)
-		WriteHeaders(w, r)
-
+	wrapper := func(w http.ResponseWriter, r *http.Request) {
 		next.ServeHTTP(w, r)
+	}
 
-		finalTime := time.Since(startTime)
-		ah.log.Infof(
-			"Completed request | id=%s,time=%v seconds",
-			requestID,
-			finalTime.Seconds(),
-		)
-	})
+	return ah.middlewareHandler(wrapper)
 }
 
 // CreateAuthHandler creates a new handler from a given handler function, wrapped in an
@@ -66,11 +54,8 @@ func (ah *ApiHandler) CreateRequestMiddleware(f func(http.ResponseWriter, *http.
 func (ah *ApiHandler) CreateAuthMiddleware(f func(http.ResponseWriter, *http.Request)) http.Handler {
 	next := http.HandlerFunc(f)
 
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ah.middlewareLogger(r)
-
+	wrapper := func(w http.ResponseWriter, r *http.Request) {
 		sessionCookie, err := r.Cookie(CookieSessionKey)
-		WriteHeaders(w, r)
 		if err != nil {
 			ah.log.Infof("Unauthorized access, no cookie found for %v", r.RemoteAddr)
 			WriteErrorResponse(w, ErrorUnauthorizedMsg, http.StatusUnauthorized, ReasonUnauthorized)
@@ -92,13 +77,38 @@ func (ah *ApiHandler) CreateAuthMiddleware(f func(http.ResponseWriter, *http.Req
 			return
 		}
 
+		// refreshes the cookie
 		SetCookieSession(w, sessionCookie.Value)
 		next.ServeHTTP(w, r)
-	})
+	}
+
+	return ah.middlewareHandler(wrapper)
 }
 
-// middlewareLogger is a helper function used to log the request information.
-// This is used for general logging of the request.
-func (ah *ApiHandler) middlewareLogger(r *http.Request) {
-	ah.log.Infof("%s: accessed on agent %s", r.RemoteAddr, r.UserAgent())
+// middlewareHandler is a generic handler used to create a new Handler wrapped in middleware.
+//
+// The given function is ran between a timer and other logging related tasks. The headers are
+// automatically written within this method.
+func (ah *ApiHandler) middlewareHandler(f func(http.ResponseWriter, *http.Request)) http.Handler {
+	// expected to be wrapped function from the other method
+	next := http.HandlerFunc(f)
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		startTime := time.Now()
+		requestID := uuid.New().String()
+
+		ah.log.Infof("Starting new request | id=%s,method=%s", requestID, r.Method)
+		ah.log.Infof("%s: accessed on agent %s", r.RemoteAddr, r.UserAgent())
+
+		WriteHeaders(w, r)
+
+		next.ServeHTTP(w, r)
+
+		finalTime := time.Since(startTime)
+		ah.log.Infof(
+			"Completed request | id=%s,time=%v seconds",
+			requestID,
+			finalTime.Seconds(),
+		)
+	})
 }
