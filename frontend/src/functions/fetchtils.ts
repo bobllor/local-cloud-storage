@@ -21,6 +21,8 @@ export async function validateSession(): Promise<boolean>{
  * Sends a request to the given path and returns its response.
  * If args are used, it will send the data with args.
  * 
+ * An error can occur in the call, and must be caught.
+ * 
  * @param path The non-base request URL, this can include the forward slash
  * @param method The method used on the request
  * @param body Any object that is being sent to the backend
