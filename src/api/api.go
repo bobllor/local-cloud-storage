@@ -87,7 +87,7 @@ func (ah *ApiHandler) CreateAuthMiddleware(f func(http.ResponseWriter, *http.Req
 
 // middlewareHandler is a generic handler used to create a new Handler wrapped in middleware.
 //
-// The given function is ran between a timer and other logging related tasks. The headers are
+// The given function is ran between a logging related tasks. The headers are
 // automatically written within this method.
 func (ah *ApiHandler) middlewareHandler(f func(http.ResponseWriter, *http.Request)) http.Handler {
 	// expected to be wrapped function from the other method
