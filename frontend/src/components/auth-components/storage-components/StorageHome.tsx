@@ -1,9 +1,31 @@
 import { type JSX } from "react";
-import { useLoaderData } from "react-router";
+import { useLoaderData, useNavigate } from "react-router";
 import { type User } from "../../../middleware";
+import { fetchApi } from "../../../functions/fetchtils";
 
 export default function StorageHome(): JSX.Element{
     const loaderData = useLoaderData<User>();
+    const navigate = useNavigate();
+
+    /**
+     * Logouts the current validated user. This uses the session ID found
+     * in the cookies.
+     * 
+     * If successful, it will logout the current user, invalidate the session in the
+     * cookie, and redirect back to the home page.
+     */
+    async function logout(): Promise<void>{
+        try{
+            const res = await fetchApi<boolean>("/api/logout", "POST");
+
+            if(res.output){
+                navigate("/");
+            }
+        }catch(err){
+            // TODO: add error popup here
+            console.error(err);
+        }
+    }
 
     return (
         <>
@@ -13,12 +35,4 @@ export default function StorageHome(): JSX.Element{
             </div> 
         </>
     )
-}
-
-/**
- * Logouts the current validated user. This uses the session ID found
- * in the cookies.
- */
-async function logout(): Promise<void>{
-
 }
