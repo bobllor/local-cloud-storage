@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/bobllor/cloud-project/src/session"
+	"github.com/bobllor/cloud-project/src/sqlquery"
 	"github.com/bobllor/cloud-project/src/utils"
 	"github.com/google/uuid"
 )
@@ -20,7 +21,6 @@ func NewSessionGateway(db *sql.DB, deps *utils.Deps) *SessionGateway {
 		database:          db,
 		sessionFieldCount: session.ColumnSize,
 		deps:              deps,
-		util:              DBUtility{log: deps.Log},
 	}
 
 	return sg
@@ -30,35 +30,26 @@ type SessionGateway struct {
 	database          *sql.DB
 	sessionFieldCount int
 	deps              *utils.Deps
-	util              DBUtility
 }
 
 // GetSessionByAccountID retrieves the session of the account ID. If a session is not found,
 // then it will return nil.
 func (sg *SessionGateway) GetSessionByAccountID(accountID string) (*session.Session, error) {
-	cb := NewClauseBuilder()
+	accSession := []session.Session{}
 
-	cb.Equal(session.ColumnAccountID, accountID)
-
-	cbQ, args, err := cb.Build()
+	query, args, err := sqlquery.Select(session.TableName).Where().Equal(session.ColumnAccountID, accountID).Build()
 	if err != nil {
 		return nil, err
 	}
 
-	baseQ := fmt.Sprintf("SELECT * FROM %s", session.TableName)
-
-	accSession := []session.Session{}
-
-	query := baseQ + " " + cbQ
-
 	rows, err := sg.database.Query(query, args...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to query database: %v | query: %s", err, query)
 	}
 
 	err = SelectRows(rows, &accSession)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse database rows: %v", err)
 	}
 
 	if len(accSession) == 0 {
@@ -75,19 +66,14 @@ func (sg *SessionGateway) GetSessionBySessionID(sessionID string) (*session.Sess
 		return nil, nil
 	}
 
-	cb := NewClauseBuilder()
-	cb.Equal(session.ColumnSessionID, sessionID)
-
-	cbq, args, err := cb.Build()
+	query, args, err := sqlquery.Select(session.TableName).Where().Equal(session.ColumnSessionID, sessionID).Build()
 	if err != nil {
 		return nil, err
 	}
 
-	query := fmt.Sprintf("SELECT * FROM %s %s", session.TableName, cbq)
-
 	rows, err := sg.database.Query(query, args...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to query database: %v | query: %s", err, query)
 	}
 
 	var ses []session.Session
@@ -97,6 +83,7 @@ func (sg *SessionGateway) GetSessionBySessionID(sessionID string) (*session.Sess
 	}
 
 	if len(ses) == 0 {
+		sg.deps.Log.Info("No session ID found")
 		return nil, nil
 	}
 
@@ -137,18 +124,21 @@ func (sg *SessionGateway) UpsertSession(accountID string) (*session.Session, err
 
 	query = query + " " + "VALUES" + placeholder + " " + duplicateStr
 
-	_, err := execQuery(sg.database, query, args...)
+	res, err := execQuery(sg.database, query, args...)
 	if err != nil {
 		sg.deps.Log.Warnf("Failed to execute query: %s | Values: %v", query, args)
 		return nil, err
 	}
 
+	sg.deps.Log.Info("Successfully upsert session")
+	logResultRows(sg.deps.Log, res)
+
 	return &ses, nil
 }
 
 // ValidateSession validates a session with the user's session ID.
-// If the sessionID is invalid, it does not exist, or it does not match the stored database
-// version, then it will return false.
+// If the sessionID is invalid, it does not exist, it does not match the stored database
+// version, or if it is expired, then it will return false.
 //
 // Any errors will be returned during the database query.
 func (sg *SessionGateway) ValidateSession(sessionID string) (bool, error) {
@@ -181,6 +171,38 @@ func (sg *SessionGateway) ValidateSession(sessionID string) (bool, error) {
 	}
 
 	return true, nil
+}
+
+// DeleteSessionByID deletes the given session ID from the table.
+//
+// If the session ID does not exist in the server, then this will do nothing.
+// Any errors that occur will be database related.
+//
+// This method does not remove the cookie from the client.
+func (sg *SessionGateway) DeleteSessionByID(sessionID string) error {
+	query := fmt.Sprintf(`
+		DELETE FROM %s 
+		WHERE %s = ?
+		`,
+		session.TableName,
+		session.ColumnSessionID,
+	)
+
+	res, err := execQuery(sg.database, query, sessionID)
+	if err != nil {
+		return fmt.Errorf("failed to delete from Session table: %v", err)
+	}
+
+	n, err := res.RowsAffected()
+	if err != nil {
+		if n == 0 {
+			sg.deps.Log.Info("No existing session ID found")
+		}
+	}
+
+	sg.deps.Log.Info("Successfully invalidated session ID")
+
+	return nil
 }
 
 // validateID validates the ID string formatting. It returns a true

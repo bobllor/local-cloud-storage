@@ -1,11 +1,10 @@
 import type React from "react";
 import { useState, type JSX } from "react";
 import { NavLink, useNavigate } from "react-router";
-import { createUrl } from "../../utils";
-import type { ResponseApi } from "../../response-types";
 import { HiOutlineXMark } from "react-icons/hi2";
+import { fetchApi } from "../../functions/fetchtils";
+import { useSessionValidation } from "./hooks";
 
-const inputFieldClass: string = "border-2 w-50 h-10"; 
 const formInputNames = {
     username: "username",
     password: "password",
@@ -14,6 +13,8 @@ const formInputNames = {
 export default function Login(): JSX.Element{
     const [loginStatus, setLoginStatus]= useState<null|boolean>(null);
     const navigate = useNavigate();
+
+    useSessionValidation();
 
     return (
         <> 
@@ -31,7 +32,7 @@ export default function Login(): JSX.Element{
                 }}
                 className="flex flex-col gap-1 items-center">
                     {loginStatus != null && !loginStatus &&
-                        <div className="flex border-2 h-15 items-center justify-center bg-red-700/60">
+                        <div className="flex border-2 h-1 items-center justify-center bg-red-700/60">
                             <div className="px-5">
                                 <div className="flex gap-2 justify-between items-center">
                                     <p>
@@ -48,10 +49,10 @@ export default function Login(): JSX.Element{
                     }
                     <div className="flex flex-col gap-1 items-center justify-center">
                         <div className="flex flex-col">
-                            <input name={formInputNames.username} type="text" className={inputFieldClass} />
+                            <input name={formInputNames.username} type="text" className={"user-input-field"} />
                         </div>
                         <div className="flex flex-col">
-                            <input name={formInputNames.password} type="password" className={inputFieldClass} />
+                            <input name={formInputNames.password} type="password" className={"user-input-field"} />
                         </div>
                         <div className="flex w-full justify-center">
                             <button 
@@ -83,28 +84,19 @@ async function login(formEvent: React.SubmitEvent<HTMLFormElement>): Promise<boo
     formEvent.preventDefault();
 
     const formData: FormData = new FormData(formEvent.currentTarget);
-    const userData = {username: "", password: ""}
-    formData.forEach((v, k) => {
-        if(k == formInputNames.username){
-            userData.username = v.toString();
-        }else{
-            userData.password = v.toString();
-        }
-    })
+    const reqObj: Record<string, any> = {};
 
-    // TODO: log this
-    const res = await fetch(createUrl("/api/login"), {
-        method: "POST",
-        body: JSON.stringify(userData),
-        credentials: "include",
+    formData.forEach((v, k) => {
+        reqObj[k] = v;
     });
 
-    const apiRes: ResponseApi<boolean> = await res.json()
-    if(apiRes.status == "error"){
-        return false
+    const res = await fetchApi<boolean>("/api/login", "POST", reqObj);
+
+    if(res.status == "error"){
+        return false;
     }
 
-    return apiRes.output
+    return res.output;
 }
 
 /**

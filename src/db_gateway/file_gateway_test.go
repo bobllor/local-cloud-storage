@@ -265,6 +265,56 @@ func TestUpdateFiles(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func TestGetFilesBySessionAndParentFolder(t *testing.T) {
+	fg, err := getTestFileGateway()
+	assert.Nil(t, err)
+
+	t.Run("Root folder", func(t *testing.T) {
+		files, err := fg.GetFilesBySessionAndParentFolder(tests.DbRowInfo.SessionID, "")
+		assert.Nil(t, err)
+
+		assert.Equal(t, len(files), 2)
+	})
+
+	t.Run("Child folder", func(t *testing.T) {
+		// not located in tests.DbRowInfo, obtained from the test SQL script
+		parent := "randomfolderidhere"
+		baseName := "test2.txt"
+		files, err := fg.GetFilesBySessionAndParentFolder(tests.DbRowInfo.SessionID, parent)
+		assert.Nil(t, err)
+
+		assert.Equal(t, len(files), 1)
+		assert.Equal(t, files[0].Name, baseName)
+	})
+
+	t.Run("Invalid folder", func(t *testing.T) {
+		parent := "doesnotexist"
+
+		_, err := fg.GetFilesBySessionAndParentFolder(tests.DbRowInfo.SessionID, parent)
+		assert.NotNil(t, err)
+		assert.Equal(t, err, FileDoesNotExistErr)
+	})
+}
+
+func TestValidateFileExists(t *testing.T) {
+	gw, err := getTestFileGateway()
+	assert.Nil(t, err)
+
+	t.Run("File exists", func(t *testing.T) {
+		stat, err := gw.validateFileExists(tests.DbRowInfo.SessionID, tests.DbRowInfo.FileID)
+		assert.Nil(t, err)
+
+		assert.True(t, stat)
+	})
+
+	t.Run("File not exists", func(t *testing.T) {
+		stat, err := gw.validateFileExists(tests.DbRowInfo.SessionID, "12345")
+		assert.Nil(t, err)
+
+		assert.False(t, stat)
+	})
+}
+
 // getFileDb gets the [FileGateway] for the test database.
 // If an error occurs, it will return an error.
 //

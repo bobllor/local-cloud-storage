@@ -77,9 +77,16 @@ func main() {
 		log.Fatal(err)
 	}
 
-	serv.RegisterHandlerFunc(api.UserPostRegisterRoute, ap.UserHandler.Post.RegisterUser)
-	serv.RegisterHandlerFunc(api.UserPostLoginRoute, ap.UserHandler.Post.Login)
-	serv.RegisterHandler(api.UserGetUserRoute, ap.CreateLogHandler(ap.UserHandler.Get.GetUserBySessionID))
+	serv.RegisterHandler(api.SessionGetValidateSessionRoute, ap.CreateRequestMiddleware(ap.SessionHandler.GetValidateSession))
+
+	serv.RegisterHandler(api.UserPostRegisterRoute, ap.CreateRequestMiddleware(ap.UserHandler.PostRegisterUser))
+	serv.RegisterHandler(api.UserPostLoginRoute, ap.CreateRequestMiddleware(ap.UserHandler.PostLogin))
+	serv.RegisterHandler(api.UserPostLogoutRoute, ap.CreateAuthMiddleware(ap.UserHandler.PostLogout))
+	serv.RegisterHandler(api.UserGetUserRoute, ap.CreateAuthMiddleware(ap.UserHandler.GetUserBySessionID))
+
+	// handles both dynamic and root based access
+	serv.RegisterHandler(api.FileGetFileRootRoute, ap.CreateAuthMiddleware(ap.FileHandler.GetFiles))
+	serv.RegisterHandler(api.FileGetFileParentRoute, ap.CreateAuthMiddleware(ap.FileHandler.GetFiles))
 
 	logger.Info("Starting server")
 	log.Fatal(serv.Start())

@@ -1,11 +1,12 @@
 package api
 
 import (
-	"errors"
 	"net/http"
+	"time"
 
 	dbcon "github.com/bobllor/cloud-project/src/db_gateway"
 	"github.com/bobllor/gologger"
+	"github.com/google/uuid"
 )
 
 const (
@@ -13,62 +14,101 @@ const (
 )
 
 type ApiHandler struct {
-	UserHandler *UserHandler
-	gateway     *dbcon.Gateway
-	log         *gologger.Logger
+	UserHandler    *UserHandler
+	FileHandler    *FileHandler
+	SessionHandler *SessionHandler
+	gateway        *dbcon.Gateway
+	log            *gologger.Logger
 }
 
 // NewApiHandler creates a new Api struct.
 func NewApiHandler(gw *dbcon.Gateway, logger *gologger.Logger) *ApiHandler {
 	api := &ApiHandler{
-		UserHandler: NewUserHandler(gw, logger),
-		gateway:     gw,
-		log:         logger,
+		UserHandler:    NewUserHandler(gw, logger),
+		FileHandler:    NewFileHandler(gw, logger),
+		SessionHandler: NewSessionHandler(gw, logger),
+		gateway:        gw,
+		log:            logger,
 	}
 
 	return api
 }
 
-func (ah *ApiHandler) CreateLogHandler(f func(http.ResponseWriter, *http.Request)) http.Handler {
+// RequestMiddleware wraps a function with a middleware used to log and write headers by default.
+//
+// This does not handle auth, use ah.CreateAuthMiddleware for auth based middleware.
+func (ah *ApiHandler) CreateRequestMiddleware(f func(http.ResponseWriter, *http.Request)) http.Handler {
 	next := http.HandlerFunc(f)
 
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// TODO: fix logging format
-		ah.log.Infof("%s: accessed on agent %s", r.RemoteAddr, r.UserAgent())
-
+	wrapper := func(w http.ResponseWriter, r *http.Request) {
 		next.ServeHTTP(w, r)
-	})
+	}
+
+	return ah.middlewareHandler(wrapper)
 }
 
 // CreateAuthHandler creates a new handler from a given handler function, wrapped in an
 // authentication-based closure.
-func (ah *ApiHandler) CreateAuthHandler(f func(http.ResponseWriter, *http.Request)) http.Handler {
+//
+// Headers are automatically written if wrapped with this method.
+func (ah *ApiHandler) CreateAuthMiddleware(f func(http.ResponseWriter, *http.Request)) http.Handler {
 	next := http.HandlerFunc(f)
 
-	// TODO: add logging
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	wrapper := func(w http.ResponseWriter, r *http.Request) {
 		sessionCookie, err := r.Cookie(CookieSessionKey)
-		WriteHeaders(w, r)
 		if err != nil {
-			newErr := errors.New("unauthorized")
-			WriteErrorResponse(w, newErr, http.StatusUnauthorized)
+			ah.log.Infof("Unauthorized access, no cookie found for %v", r.RemoteAddr)
+			WriteErrorResponse(w, ErrorUnauthorizedMsg, http.StatusUnauthorized, ReasonUnauthorized)
 
 			return
 		}
 
 		validSession, err := ah.gateway.Session.ValidateSession(sessionCookie.Value)
 		if err != nil {
-			WriteErrorResponse(w, err, http.StatusInternalServerError)
+			ah.log.Criticalf("Validating session database query failed: %v", err)
+			WriteErrorResponse(w, ErrorInternalErrorMsg, http.StatusInternalServerError, ReasonInternalError)
 			return
 		}
 
 		if !validSession {
-			sessionErr := errors.New("session ID is invalid")
-			WriteErrorResponse(w, sessionErr, http.StatusUnauthorized)
+			ah.log.Infof("Invalid session ID, failed validation for %v", r.RemoteAddr)
+			WriteErrorResponse(w, ErrorUnauthorizedMsg, http.StatusUnauthorized, ReasonUnauthorized)
 
 			return
 		}
 
+		// refreshes the cookie
+		SetCookieSession(w, sessionCookie.Value)
 		next.ServeHTTP(w, r)
+	}
+
+	return ah.middlewareHandler(wrapper)
+}
+
+// middlewareHandler is a generic handler used to create a new Handler wrapped in middleware.
+//
+// The given function is ran between a logging related tasks. The headers are
+// automatically written within this method.
+func (ah *ApiHandler) middlewareHandler(f func(http.ResponseWriter, *http.Request)) http.Handler {
+	// expected to be wrapped function from the other method
+	next := http.HandlerFunc(f)
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		startTime := time.Now()
+		requestID := uuid.New().String()
+
+		ah.log.Infof("Starting new request | id=%s,method=%s", requestID, r.Method)
+		ah.log.Infof("%s: accessed on agent %s", r.RemoteAddr, r.UserAgent())
+
+		WriteHeaders(w, r)
+
+		next.ServeHTTP(w, r)
+
+		finalTime := time.Since(startTime)
+		ah.log.Infof(
+			"Completed request | id=%s,time=%v seconds",
+			requestID,
+			finalTime.Seconds(),
+		)
 	})
 }

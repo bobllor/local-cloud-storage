@@ -6,7 +6,9 @@ import HomePage from './components/default-components/HomePage.tsx'
 import Login from './components/default-components/Login.tsx'
 import App from './components/App.tsx'
 import StorageHome from './components/auth-components/storage-components/StorageHome.tsx'
-import { authMiddleware, loginMiddleware } from './middleware.ts'
+import { authMiddleware, getUserContext } from './middleware.ts'
+import FileProvider from './context/FileContext.tsx'
+import Register from './components/default-components/Register.tsx'
 
 const router = createBrowserRouter([
   {
@@ -15,16 +17,19 @@ const router = createBrowserRouter([
     children: [
       {index: true, element: <HomePage />},
       {
-        middleware: [loginMiddleware],
         path: "login",
         element: <Login />
+      },
+      {
+        path: "register",
+        element: <Register />,
       },
       {
         path: "storage",
         element: <App />,
         middleware: [authMiddleware],
         children: [
-          {index: true, element: <StorageHome />},
+          {index: true, loader: getUserContext, element: <StorageHome />},
         ]
       },
     ]
@@ -33,6 +38,8 @@ const router = createBrowserRouter([
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
+    <FileProvider>
       <RouterProvider router={router} />
+    </FileProvider>
   </StrictMode>,
 )

@@ -2,8 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"errors"
-	"fmt"
 	"net/http"
 
 	dbcon "github.com/bobllor/cloud-project/src/db_gateway"
@@ -14,6 +12,7 @@ import (
 const (
 	UserPostRegisterRoute = "POST /api/register"
 	UserPostLoginRoute    = "POST /api/login"
+	UserPostLogoutRoute   = "POST /api/logout"
 	UserGetUserRoute      = "/api/user"
 )
 
@@ -22,14 +21,8 @@ const (
 
 func NewUserHandler(gw *dbcon.Gateway, logger *gologger.Logger) *UserHandler {
 	uh := &UserHandler{
-		Post: PostUserHandler{
-			Gateway: gw,
-			deps:    utils.NewDeps(logger),
-		},
-		Get: GetUserHandler{
-			Gateway: gw,
-			deps:    utils.NewDeps(logger),
-		},
+		Gateway: gw,
+		deps:    &utils.Deps{Log: logger},
 	}
 
 	return uh
@@ -38,12 +31,6 @@ func NewUserHandler(gw *dbcon.Gateway, logger *gologger.Logger) *UserHandler {
 // UserHandler contains handlers used for handling user related
 // logic.
 type UserHandler struct {
-	Post PostUserHandler
-	Get  GetUserHandler
-	deps *utils.Deps
-}
-
-type GetUserHandler struct {
 	Gateway *dbcon.Gateway
 	deps    *utils.Deps
 }
@@ -56,23 +43,19 @@ type GetUserHandler struct {
 //
 // If the user cannot be found, then the output will be nil in the Response.
 // An error Response will only be returned for internal errors.
-func (gu *GetUserHandler) GetUserBySessionID(w http.ResponseWriter, r *http.Request) {
-	WriteHeaders(w, r)
-
-	gu.deps.Log.Debugf("Request cookies size: %d", len(r.Cookies()))
+func (uh *UserHandler) GetUserBySessionID(w http.ResponseWriter, r *http.Request) {
+	uh.deps.Log.Debugf("Request cookies size: %d", len(r.Cookies()))
 
 	id := GetSessionFromCookie(r)
 	if id == "" {
-		err := errors.New("session ID does not exist in cookie")
-		gu.deps.Log.Infof("Cookie %s does not exist for session ID", CookieSessionKey)
-
-		WriteErrorResponse(w, err, http.StatusBadRequest)
+		uh.deps.Log.Info("No cookie found with request")
+		WriteErrorResponse(w, ErrorUnauthorizedMsg, http.StatusUnauthorized, ReasonUnauthorized)
 		return
 	}
 
-	ua, err := gu.Gateway.User.GetUserBySessionID(id)
+	ua, err := uh.Gateway.User.GetUserBySessionID(id)
 	if err != nil {
-		WriteErrorResponse(w, err, http.StatusInternalServerError)
+		WriteErrorResponse(w, ErrorInternalErrorMsg, http.StatusInternalServerError, ReasonInternalError)
 		return
 	}
 
@@ -80,24 +63,20 @@ func (gu *GetUserHandler) GetUserBySessionID(w http.ResponseWriter, r *http.Requ
 		WriteResponse(w, NewApiResponse(nil))
 	} else {
 		res := NewApiResponse(ua)
-		i, err := WriteResponse(w, res)
+		n, err := WriteResponse(w, res)
 		if err != nil {
-			gu.deps.Log.Warnf("failed to write response: %v", err)
-			WriteErrorResponse(w, err, http.StatusInternalServerError)
+			uh.deps.Log.Warnf("failed to write response: %v", err)
+			WriteErrorResponse(w, ErrorInternalErrorMsg, http.StatusInternalServerError, ReasonInternalError)
 
 			return
 		}
 
-		gu.deps.Log.Infof("Successfully written %d byte(s) to response", i)
+		uh.deps.Log.Info("Completed user retrieval by session ID request")
+		logResponseBytes(uh.deps.Log, n)
 	}
 }
 
-type PostUserHandler struct {
-	Gateway *dbcon.Gateway
-	deps    *utils.Deps
-}
-
-// Login is the handler for handling the login and authentication.
+// PostLogin is the handler for handling the login and authentication.
 // The username and password will be validated if the cookie is not found
 // with a valid session ID.
 //
@@ -105,25 +84,24 @@ type PostUserHandler struct {
 //
 // If the user is successfully authenticated, the output of the response
 // will contain the status and the session ID will be written to the cookie.
-func (pu *PostUserHandler) Login(w http.ResponseWriter, r *http.Request) {
-	pu.deps.Log.Infof("Login handler accessed (%v)", r.RemoteAddr)
-	var user RequestUserInfo
+func (uh *UserHandler) PostLogin(w http.ResponseWriter, r *http.Request) {
+	uh.deps.Log.Infof("Login handler accessed (%v)", r.RemoteAddr)
+	var user RequestUserLoginInfo
 
-	WriteHeaders(w, r)
 	c, err := r.Cookie(CookieSessionKey)
 	if err != nil {
-		pu.deps.Log.Infof("Cookie key %s not found", CookieSessionKey)
+		uh.deps.Log.Infof("Cookie key %s not found", CookieSessionKey)
 	} else {
-		validSession, err := pu.Gateway.Session.ValidateSession(c.Value)
+		validSession, err := uh.Gateway.Session.ValidateSession(c.Value)
 		if err != nil {
-			pu.deps.Log.Warnf("Got an error while validating session: %v", err)
+			uh.deps.Log.Warnf("Got an error while validating session: %v", err)
 		}
 
 		if validSession {
 			// NOTE: this might be a bad idea. look at this another time
 			_, err := WriteResponse(w, NewApiResponse(validSession))
 			if err != nil {
-				WriteErrorResponse(w, err, http.StatusInternalServerError)
+				WriteErrorResponse(w, ErrorInternalErrorMsg, http.StatusInternalServerError, ReasonInternalError)
 			} else {
 				return
 			}
@@ -132,65 +110,120 @@ func (pu *PostUserHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	err = json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
-		WriteErrorResponse(w, err, http.StatusBadRequest)
+		WriteErrorResponse(w, ErrorBadDataMsg, http.StatusBadRequest, ReasonBadRequestData)
 		return
 	}
 
-	validUser, ua, err := pu.Gateway.User.ValidateUser(user.Username, user.Password)
+	validUser, ua, err := uh.Gateway.User.ValidateUser(user.Username, user.Password)
 	if err != nil {
-		pu.deps.Log.Criticalf("Error occurred during user validation: %v", err)
-		WriteErrorResponse(w, err, http.StatusInternalServerError)
+		uh.deps.Log.Criticalf("Error occurred during user validation: %v", err)
+		WriteErrorResponse(w, ErrorInternalErrorMsg, http.StatusInternalServerError, ReasonInternalError)
 		return
 	}
 
-	pu.deps.Log.Debugf("%s result: %v", user.Username, validUser)
+	uh.deps.Log.Debugf("%s result: %v", user.Username, validUser)
 
 	res := NewApiResponse(validUser)
 	if validUser {
-		ses, err := pu.Gateway.Session.UpsertSession(ua.AccountID)
+		// a new login will always create a new session ID
+		ses, err := uh.Gateway.Session.UpsertSession(ua.AccountID)
 		if err != nil {
-			WriteErrorResponse(w, err, http.StatusInternalServerError)
+			WriteErrorResponse(w, ErrorInternalErrorMsg, http.StatusInternalServerError, ReasonInternalError)
 		}
 
-		pu.deps.Log.Infof("Setting session data for user %s", ua.Username)
-		SetCookieSession(w, ses)
+		uh.deps.Log.Infof("Setting session data for user %s", ua.Username)
+		SetCookieSession(w, ses.SessionID)
 		_, err = WriteResponse(w, res)
 		if err != nil {
-			WriteErrorResponse(w, err, http.StatusInternalServerError)
+			WriteErrorResponse(w, ErrorInternalErrorMsg, http.StatusInternalServerError, ReasonInternalError)
 		}
 	} else {
-		err = fmt.Errorf("user %s does not exist", user.Username)
-		WriteErrorResponse(w, err, http.StatusBadRequest)
+		uh.deps.Log.Info("User does not exist")
+		WriteErrorResponse(w, ErrorBadDataMsg, http.StatusBadRequest, ReasonBadRequestData)
 	}
+
+	uh.deps.Log.Info("Completed login request")
 }
 
-// RegisterUser is the handler for registering users. A new session.Session struct
-// will be marshalled as the response.
-func (pu *PostUserHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
-	var user RequestUserInfo
+// PostLogout is the handler for invalidating the user.
+// This requires the cookie for the session ID.
+//
+// The session ID will be deleted from the table and the cookie will be removed
+// from the browser.
+//
+// A boolean value will be returned to the response output if successful.
+func (uh *UserHandler) PostLogout(w http.ResponseWriter, r *http.Request) {
+	id := GetSessionFromCookie(r)
+	if id == "" {
+		WriteErrorResponse(w, ErrorUnauthorizedMsg, http.StatusBadRequest, ReasonUnauthorized)
+		return
+	}
+
+	err := uh.Gateway.Session.DeleteSessionByID(id)
+	if err != nil {
+		WriteErrorResponse(w, ErrorInternalErrorMsg, http.StatusInternalServerError, ReasonInternalError)
+		return
+	}
+
+	ExpireCookieSession(w)
+
+	n, err := WriteResponse(w, NewApiResponse(true))
+	if err != nil {
+		WriteErrorResponse(w, ErrorInternalErrorMsg, http.StatusInternalServerError, ReasonInternalError)
+		return
+	}
+
+	uh.deps.Log.Info("Completed logout request")
+	logResponseBytes(uh.deps.Log, n)
+}
+
+// PostRegisterUser is the handler for registering users.
+//
+// If successful, the session ID will be written to the cookie. The output will
+// only consist of a boolean value.
+func (uh *UserHandler) PostRegisterUser(w http.ResponseWriter, r *http.Request) {
+	var user RequestUserRegisterInfo
 
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
-		WriteErrorResponse(w, err, http.StatusBadRequest)
+		uh.deps.Log.Warnf("Failed to decode JSON: %v", err)
+		WriteErrorResponse(w, ErrorBadDataMsg, http.StatusBadRequest, ReasonBadRequestData)
 
 		return
 	}
 
-	acc, err := pu.Gateway.User.AddUser(user.Username, user.Password)
+	acc, err := uh.Gateway.User.AddUser(user.Username, user.Password)
 	if err != nil {
-		WriteErrorResponse(w, err, http.StatusInternalServerError)
+		if dbcon.IsDuplicateSqlError(err) {
+			WriteErrorResponse(w, "Username already exists", http.StatusBadRequest, ReasonUserAlreadyExists)
+		} else if dbcon.IsUsernameError(err) {
+			// the error for username validation already contains the string for the frontend
+			WriteErrorResponse(w, err.Error(), http.StatusBadRequest, ReasonBadUsername)
+		} else {
+			uh.deps.Log.Warnf("Failed to add user: %v", err)
+			WriteErrorResponse(w, ErrorInternalErrorMsg, http.StatusInternalServerError, ReasonInternalError)
+		}
+
 		return
 	}
 
-	s, err := pu.Gateway.Session.UpsertSession(acc.AccountID)
+	s, err := uh.Gateway.Session.UpsertSession(acc.AccountID)
 	if err != nil {
-		WriteErrorResponse(w, err, http.StatusInternalServerError)
+		uh.deps.Log.Warnf("Failed to upsert session: %v", err)
+		WriteErrorResponse(w, ErrorInternalErrorMsg, http.StatusInternalServerError, ReasonInternalError)
 		return
 	}
 
-	_, err = WriteResponse(w, s)
+	SetCookieSession(w, s.SessionID)
+
+	a := NewApiResponse(true)
+	n, err := WriteResponse(w, a)
 	if err != nil {
-		WriteErrorResponse(w, err, http.StatusInternalServerError)
+		uh.deps.Log.Warnf("Failed to write response: %v", err)
+		WriteErrorResponse(w, ErrorInternalErrorMsg, http.StatusInternalServerError, ReasonInternalError)
 		return
 	}
+
+	uh.deps.Log.Info("Completed user registration request")
+	logResponseBytes(uh.deps.Log, n)
 }

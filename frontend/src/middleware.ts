@@ -1,10 +1,10 @@
-import { createContext, redirect, type MiddlewareFunction } from "react-router";
-import { createUrl } from "./utils";
+import { createContext, redirect, type LoaderFunction, type MiddlewareFunction } from "react-router";
 import type { ResponseApi } from "./response-types";
+import { fetchApi } from "./functions/fetchtils";
 
 export const userContext = createContext<User|null>(null);
 
-type User = {
+export type User = {
     account_id: string
     username: string
     created_on: Date
@@ -16,20 +16,20 @@ type User = {
  * in the request header. This validates if the session ID is correct
  * and the user is valid.
  * 
+ * Once valid, it will set the user context and it can be used for all routes
+ * afterwards.
+ * 
  * Authentication failures will redirect to the login page.
  */
 export const authMiddleware: MiddlewareFunction = async ({context}) => {
-    const res: ResponseApi<User> = await fetch(createUrl("/api/user"), {
-        method: "GET",
-        credentials: "include",
-    }).then(val => val.json());
+    const user = await getUser();
 
-    if(res.status == "error"){
-        throw redirect("/login")
+    if(!user){
+        throw redirect("/login");
     }
 
     // TODO: log res not in console.log
-    context.set(userContext, res.output);
+    context.set(userContext, user);
 }
 
 /**
@@ -41,12 +41,25 @@ export const authMiddleware: MiddlewareFunction = async ({context}) => {
  * bypassing the login page.
  */
 export const loginMiddleware: MiddlewareFunction = async () => {
-    const res: ResponseApi<User> = await fetch(createUrl("/api/user"), {
-        method: "GET",
-        credentials: "include",
-    }).then(val => val.json());
+    const res: ResponseApi<User> = await fetchApi("/api/user", "GET");
 
     if(res.status == "success"){
         throw redirect("/storage");
     }
+}
+
+export const getUserContext: LoaderFunction = async ({context}) => {
+    const user = context.get(userContext);
+
+    return user;
+}
+
+export async function getUser(): Promise<User|null>{
+    const res: ResponseApi<User> = await fetchApi("/api/user", "GET");
+
+    if (res.status == "error"){
+        return null;
+    }
+
+    return res.output;
 }

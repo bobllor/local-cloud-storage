@@ -33,6 +33,13 @@ type UserAccountNoPassword struct {
 
 // ToArgs converts the struct into an any slice.
 // This is used for query arguments.
+//
+// It will return the args in the order of:
+//  1. AccountID
+//  2. Username
+//  3. PasswordHash
+//  4. CreatedOn
+//  5. Active
 func (ua *UserAccount) ToArgs() []any {
 	args := []any{}
 

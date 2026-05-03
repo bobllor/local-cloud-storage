@@ -1,6 +1,7 @@
 package dbgateway
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/bobllor/assert"
@@ -14,7 +15,7 @@ const (
 	testPassword = "anothertestpassword"
 )
 
-func TestGetUserID(t *testing.T) {
+func TestGetUserByID(t *testing.T) {
 	udb := newTestUserGateway(t)
 
 	user, err := udb.GetUserByID(tests.DbRowInfo.AccountID)
@@ -62,7 +63,7 @@ func TestCheckCredentialsInvalid(t *testing.T) {
 
 func TestAddUser(t *testing.T) {
 	ugw := newTestUserGateway(t)
-	username := "a user here"
+	username := "auser.here"
 	password := "somepasswordhere"
 
 	acc, err := ugw.AddUser(username, password)
@@ -74,7 +75,7 @@ func TestAddUser(t *testing.T) {
 
 func TestAddUserComparePassword(t *testing.T) {
 	ugw := newTestUserGateway(t)
-	username := "a user here"
+	username := "a.userhere"
 	password := "somepasswordhere"
 
 	acc, err := ugw.AddUser(username, password)
@@ -137,6 +138,113 @@ func TestGetUserBySessionID(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Nil(t, ua)
 	})
+}
+
+func TestValidateUsername(t *testing.T) {
+	cases := []string{
+		"abcdef.1",
+		"a234567",
+		"lolxdf",
+		"usernamegoeshere",
+		"username.goes.here",
+	}
+
+	for _, c := range cases {
+		err := newTestUserGateway(t).validateUsername(c)
+
+		assert.Nil(t, err)
+	}
+}
+
+func TestValidateUsernameError(t *testing.T) {
+	type cases struct {
+		Value string
+		Error error
+	}
+	testCases := []cases{
+		{
+			Value: "12345a",
+			Error: UsernameInvalidFirstCharErr,
+		},
+		{
+			Value: "_12345a",
+			Error: UsernameInvalidFirstCharErr,
+		},
+		{
+			Value: "asd fgh",
+			Error: UsernameIsInvalidErr,
+		},
+		{
+			Value: "asdf",
+			Error: UsernameLenOutOfRangeErr,
+		},
+		{
+			Value: "asdf][]h/;',.",
+			Error: UsernameInvalidEndCharErr,
+		},
+		{
+			Value: "abde..dsfd",
+			Error: UsernameIsInvalidErr,
+		},
+		{
+			Value: "abcde..sdfa.fff..s123",
+			Error: UsernameIsInvalidErr,
+		},
+	}
+
+	ug := newTestUserGateway(t)
+
+	for _, c := range testCases {
+		err := ug.validateUsername(c.Value)
+
+		assert.NotNil(t, err)
+		assert.True(t, errors.Is(err, c.Error))
+	}
+}
+
+func TestValidatePassword(t *testing.T) {
+	type cases struct {
+		Password        string
+		ConfirmPassword string
+		Error           error
+	}
+
+	ug := newTestUserGateway(t)
+	tCases := []cases{
+		{
+			Password:        "abcdef!@#@",
+			ConfirmPassword: "abcdef!@#@",
+		},
+		{
+			Password:        "testPassWORD123$$!!",
+			ConfirmPassword: "testPassWORD123$$!!",
+		},
+		{
+			Password:        "wrongIncorrect",
+			ConfirmPassword: "fdsa12345",
+			Error:           PasswordNotEqualErr,
+		},
+		{
+			Password:        "valu",
+			ConfirmPassword: "valu",
+			Error:           PasswordLenOutOfRangeErr,
+		},
+		{
+			Password:        "",
+			ConfirmPassword: "",
+			Error:           PasswordEmptyErr,
+		},
+	}
+
+	for _, c := range tCases {
+		err := ug.validatePassword(c.Password, c.ConfirmPassword)
+		if c.Error != nil {
+			assert.NotNil(t, err)
+			assert.True(t, IsPasswordError(err))
+		} else {
+			assert.Nil(t, err)
+		}
+	}
 }
 
 func newTestUserGateway(t *testing.T) *UserGateway {

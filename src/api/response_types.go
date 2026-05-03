@@ -8,11 +8,19 @@ const (
 // StatusType is the status of the response.
 type StatusType string
 
+// ReasonCode is a special code used to indicate what error type had occurred
+// on the backend.
+type ReasonCode string
+
 type Error struct {
 	// Code is the status code of the error.
-	Code int `json:"code"`
+	Code int `json:"statusCode"`
 
-	// Message is the reason why the error had occurred.
+	// Reason is a special code used to indicate what error type had occurred
+	// on the backend.
+	Reason ReasonCode `json:"reason"`
+
+	// Message is the string explaining why the error had occurred.
 	Message string `json:"message"`
 }
 
@@ -45,11 +53,12 @@ func NewApiResponse(output any) *ApiResponse {
 // statusCode is the type of status code int.
 //
 // errMessage is the message string to send back to the client.
-func NewApiResponseError(statusCode int, errMessage string) *ApiResponse {
+func NewApiResponseError(statusCode int, errMessage string, reason ReasonCode) *ApiResponse {
 	res := &ApiResponse{
 		Status: StatusError,
 		Error: &Error{
 			Code:    statusCode,
+			Reason:  reason,
 			Message: errMessage,
 		},
 	}

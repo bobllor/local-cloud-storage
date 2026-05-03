@@ -7,12 +7,17 @@
 export type ResponseStatus = "success" | "error";
 
 /**
- * Represents a successful API response.
+ * Represents a successful API response. The output can be of type T depending on
+ * how the endpoint is configured. Output is only optional if an error occurs.
  */
 export type ResponseApi<T> = {
-    status: ResponseStatus
+    status: "success"
     output: T
-    error?: ResponseError
+    error: never
+} | {
+    status: "error"
+    output: never
+    error: ResponseError
 }
 
 /**
@@ -21,5 +26,12 @@ export type ResponseApi<T> = {
  */
 export type ResponseError = {
     code: number
+    reason: ReasonCode
     message: string
 }
+
+/**
+ * ReasonCode indicates what error type had occurred during the endpoint
+ * call.
+ */
+export type ReasonCode = "INTERNAL_ERROR" | "BAD_DATA" | "USER_ALREADY_EXISTS" | "BAD_USERNAME" | "BAD_PASSWORD" | "UNAUTHORIZED";

@@ -24,4 +24,6 @@ jobs:
       - name: Go setup
         run: go mod download
       - name: Go test
-        run: go test ./...
+        run: go test ./... -count=1
+      - name: Go test race
+        run: go test ./... -race

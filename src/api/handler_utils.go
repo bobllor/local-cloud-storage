@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/bobllor/cloud-project/src/session"
+	"github.com/bobllor/gologger"
 )
 
 const (
@@ -15,15 +15,10 @@ type HandlerMap map[string]func(http.ResponseWriter, *http.Request)
 
 type Handler interface{}
 
-// WriteErrorResponse is a helper function used to write an error if one occurred to
+// WriteErrorResponse is a helper function used to write an error to
 // the ResponseWriter.
-// This does not check if err != nil. If err == nil then this will do nothing.
-func WriteErrorResponse(w http.ResponseWriter, err error, statusCode int) {
-	if err == nil {
-		return
-	}
-
-	errRes := NewApiResponseError(statusCode, err.Error())
+func WriteErrorResponse(w http.ResponseWriter, msg string, statusCode int, reason ReasonCode) {
+	errRes := NewApiResponseError(statusCode, msg, reason)
 
 	b, err := json.Marshal(errRes)
 	// if err is not nil, then default to a basic value.
@@ -39,6 +34,8 @@ func WriteErrorResponse(w http.ResponseWriter, err error, statusCode int) {
 // WriteResponse writes a response to the ResponseWriter. If an error occurs
 // while writing the response, it will return the error and the response will not
 // be written.
+//
+// The bytes written will be returned.
 func WriteResponse(w http.ResponseWriter, v any) (int, error) {
 	b, err := json.Marshal(v)
 	if err != nil {
@@ -73,12 +70,29 @@ func GetSessionFromCookie(r *http.Request) string {
 }
 
 // SetCookieSession sets the cookie for the session.
-func SetCookieSession(w http.ResponseWriter, s *session.Session) {
+// If the session already exists in the cookie, then it will overwrite the
+// cookie's value.
+func SetCookieSession(w http.ResponseWriter, id string) {
 	c := http.Cookie{
 		Name:     CookieSessionKey,
-		Value:    s.SessionID,
+		Value:    id,
 		Path:     "/",
 		MaxAge:   3600,
+		HttpOnly: true,
+		Secure:   true,
+	}
+
+	http.SetCookie(w, &c)
+}
+
+// ExpireCookieSession sets MaxAge=0 for the cookie session key to the
+// ResponseWriter for the request.
+func ExpireCookieSession(w http.ResponseWriter) {
+	c := http.Cookie{
+		Name:     CookieSessionKey,
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
 		HttpOnly: true,
 		Secure:   true,
 	}
@@ -89,4 +103,9 @@ func SetCookieSession(w http.ResponseWriter, s *session.Session) {
 // SetCookie sets the cookie with the given key and value to the headers.
 func SetCookie(w http.ResponseWriter, key string, value string) {
 
+}
+
+// logResponseBytes logs the bytes written to the response.
+func logResponseBytes(log *gologger.Logger, n int) {
+	log.Infof("Wrote %d bytes to response", n)
 }
