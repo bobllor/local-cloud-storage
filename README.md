@@ -18,21 +18,24 @@ Software requirements:
 - Docker
 - Docker Compose
 
-## Getting Started
+## Development
 
-Before starting the server, the configuration YAML must be set up.
-This is required for the server to run.
+The configuration YAML must be set up for the local dev environment.
 
 ```yml
-# sample config
-
+database: 
+  name: TestLocalCloudStorage
+  address: :3307
+  network_protocol: tcp
+  file_user:
+    username: root
+  account_user:
+    username: root
+server_address: :8080
 ```
 
-The frontend service must also have its own `.env` file with
-the following:
-
-**frontend/.env**:
+The frontend service must also have its own `.env` located in `frontend/.env`:
 
 ```env
-VITE_SERVER_BASE_URL=<server_host>
+VITE_SERVER_BASE_URL=http://localhost:8080
 ```
