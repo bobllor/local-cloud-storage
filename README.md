@@ -17,3 +17,22 @@ Software requirements:
 - Git
 - Docker
 - Docker Compose
+
+## Getting Started
+
+Before starting the server, the configuration YAML must be set up.
+This is required for the server to run.
+
+```yml
+# sample config
+
+```
+
+The frontend service must also have its own `.env` file with
+the following:
+
+**frontend/.env**:
+
+```env
+VITE_SERVER_BASE_URL=<server_host>
+```
