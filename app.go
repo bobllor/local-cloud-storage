@@ -1,8 +1,12 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"log"
 	"os"
+	"regexp"
+	"strings"
 
 	"github.com/bobllor/cloud-project/src/api"
 	"github.com/bobllor/cloud-project/src/config"
@@ -13,8 +17,15 @@ import (
 )
 
 func main() {
-	// TODO: add a function to look for case-insensitive and fuzzy yaml files
-	scfg, err := config.NewServerConfig("config.yml")
+	fileName := "config"
+	exts := []string{".yaml", ".yml"}
+
+	configFile, err := getConfig(fileName, exts)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	scfg, err := config.NewServerConfig(configFile)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -71,10 +82,74 @@ func main() {
 		Session: sg,
 	}
 
-	ap := api.NewApiHandler(gw, logger)
-	serv, err := server.NewServer(scfg.ServerAddress)
+	serv, err := createServer(gw, logger, scfg.ServerAddress)
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	logger.Info("Starting server")
+	log.Fatal(serv.Start())
+}
+
+// getConfig retrieves the config file from the root folder.
+//
+// It loops through a given extension slice for the file with the config
+// name. If the name is found with the
+// extension, then it will return the full path to the file.
+//
+// The given extensions must start with a leading period. It will return an error
+// if the extensions do not follow this convention.
+//
+// If no files are found or an error occurs, then it will
+// return an error instead.
+func getConfig(configName string, exts []string) (string, error) {
+	if len(exts) == 0 {
+		return "", errors.New("no extensions given for config search")
+	}
+
+	const EXT_PATTERN = `^\.(.+)$`
+
+	rootPath, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+
+	files, err := utils.GetFiles(rootPath)
+	if err != nil {
+		return "", err
+	}
+
+	for _, ext := range exts {
+		if len(ext) == 0 {
+			return "", errors.New("empty extension string given in extensions")
+		}
+
+		matched, err := regexp.MatchString(EXT_PATTERN, ext)
+		if err != nil {
+			return "", err
+		}
+		if !matched {
+			return "", fmt.Errorf("'%s' must contain a leading period", ext)
+		}
+
+		fileName := strings.ToLower(fmt.Sprintf("%s%s", configName, ext))
+
+		filePath, ok := files[fileName]
+		if ok {
+			return filePath, nil
+		}
+	}
+
+	return "", fmt.Errorf("could not find file %s", configName)
+}
+
+// createServer creates the server and registers the routes. It will
+// return the server.Server.
+func createServer(gw *dbgateway.Gateway, logger *gologger.Logger, serverAddress string) (*server.Server, error) {
+	ap := api.NewApiHandler(gw, logger)
+	serv, err := server.NewServer(serverAddress)
+	if err != nil {
+		return nil, err
 	}
 
 	serv.RegisterHandler(api.SessionGetValidateSessionRoute, ap.CreateRequestMiddleware(ap.SessionHandler.GetValidateSession))
@@ -88,6 +163,5 @@ func main() {
 	serv.RegisterHandler(api.FileGetFileRootRoute, ap.CreateAuthMiddleware(ap.FileHandler.GetFiles))
 	serv.RegisterHandler(api.FileGetFileParentRoute, ap.CreateAuthMiddleware(ap.FileHandler.GetFiles))
 
-	logger.Info("Starting server")
-	log.Fatal(serv.Start())
+	return serv, nil
 }
