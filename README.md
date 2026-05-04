@@ -17,3 +17,25 @@ Software requirements:
 - Git
 - Docker
 - Docker Compose
+
+## Development
+
+The configuration YAML must be set up for the local dev environment.
+
+```yml
+database: 
+  name: TestLocalCloudStorage
+  address: :3307
+  network_protocol: tcp
+  file_user:
+    username: root
+  account_user:
+    username: root
+server_address: :8080
+```
+
+The frontend service must also have its own `.env` located in `frontend/.env`:
+
+```env
+VITE_SERVER_BASE_URL=http://localhost:8080
+```
