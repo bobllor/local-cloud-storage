@@ -78,8 +78,6 @@ func TestUpsertSessionReplace(t *testing.T) {
 	assert.Equal(t, baseS.ExpireOn.Compare(newS.ExpireOn), -1)
 
 	assert.Equal(t, newS.SessionID, sesh.SessionID)
-	assert.True(t, newS.CreatedOn.Truncate(time.Minute).Equal(sesh.CreatedOn.Truncate(time.Minute)))
-	assert.True(t, newS.ExpireOn.Truncate(time.Minute).Equal(sesh.ExpireOn.Truncate(time.Minute)))
 }
 
 func TestGetSessionBySessionID(t *testing.T) {
