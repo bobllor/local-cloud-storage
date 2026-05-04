@@ -87,7 +87,14 @@ func (s *ServerConfig) LoadEnvironment() error {
 }
 
 // LoadEnvFiles loads the slice of .env files into the program.
+// If no env files are given, then it will not do anything.
+//
+// Variables that already exist will not be overridden.
 func (s *ServerConfig) LoadEnvFiles() error {
+	if len(s.EnvFiles) == 0 {
+		return nil
+	}
+
 	err := godotenv.Load(s.EnvFiles...)
 	if err != nil {
 		return fmt.Errorf("failed to load .env files: %v", err)
