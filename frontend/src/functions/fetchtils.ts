@@ -24,11 +24,11 @@ export async function validateSession(): Promise<boolean>{
  * An error can occur in the call, and must be caught.
  * 
  * @param path The non-base request URL, this can include the forward slash
- * @param method The method used on the request
+ * @param method The method used on the request, by default it uses GET
  * @param body Any object that is being sent to the backend
  * @returns ResponseApi promise of type T
  */
-export async function fetchApi<T>(path: string, method: method = "GET", data?: {}): Promise<ResponseApi<T>>{
+export async function fetchApi<T>(path: string, method: Method = "GET", data?: {}): Promise<ResponseApi<T>>{
     const res = await fetch(createUrl(path), {
         method: method,
         body: !data ? undefined : JSON.stringify(data),
@@ -40,4 +40,4 @@ export async function fetchApi<T>(path: string, method: method = "GET", data?: {
     return r;
 }
 
-export type method = "GET" | "POST";
+export type Method = "GET" | "POST" | "PUT" | "DELETE";
