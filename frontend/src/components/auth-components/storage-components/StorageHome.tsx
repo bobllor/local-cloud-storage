@@ -1,11 +1,17 @@
-import { type JSX } from "react";
+import { useEffect, type JSX } from "react";
 import { useLoaderData, useNavigate } from "react-router";
 import { type User } from "../../../middleware";
 import { fetchApi } from "../../../functions/fetchtils";
+import { useFileStore } from "../../../context/FileStore";
 
 export default function StorageHome(): JSX.Element{
     const loaderData = useLoaderData<User>();
+    const {setFiles} = useFileStore();
     const navigate = useNavigate();
+
+    useEffect(() => {
+        setFiles();
+    }, []);
 
     /**
      * Logouts the current validated user. This uses the session ID found
