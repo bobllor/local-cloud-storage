@@ -37,6 +37,12 @@ export async function fetchApi<T>(path: string, method: Method = "GET", data?: {
 
     const r: ResponseApi<T> = await res.json()
 
+    // TODO: proper log, output is not logged
+    console.debug(`Response status: ${r.status}`);
+    if(r.status == "error"){
+        throw r;
+    }
+
     return r;
 }
 
