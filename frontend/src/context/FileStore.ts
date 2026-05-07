@@ -3,14 +3,27 @@ import { fetchApi } from "../functions/fetchtils";
 
 type FileStore = {
     files: Record<string, Array<File>>,
-    setFiles: (parentID?: string) => {},
+    /**
+     * Sets the contents of the files based on the parentID. If the parentID already
+     * has an entry, then this will do nothing.
+     * 
+     * An error can occur and will return a ResponseApi error.
+     * @param parentID 
+     */
+    setFiles: (parentID?: string) => Promise<void>,
+    /**
+     * Retrieves the files based on the parentID.
+     * @param parentID The parentID of the files, this can be null indicating it is the root folder
+     * @returns The array of the files related to the parentID
+     */
+    getFiles: (parentID?: string) => Array<File>,
 }
 
 /**
  * The type representing the File data of the database.
  * This does not include the file path.
  */
-type File = {
+export type File = {
     accountID: string
     fileName: string
     fileType: string
@@ -24,11 +37,6 @@ const ROOT_KEY = "root";
 
 export const useFileStore = create<FileStore>((set, get) => ({
     files: {},
-    /**
-     * Sets the contents of the files based on the parentID. If the parentID already
-     * has an entry, then this will do nothing.
-     * @param parentID 
-     */
     setFiles: async (parentID?: string) => {
         const key = parentID ? parentID : ROOT_KEY;
         const route = parentID ? `/api/storage/folder/${key}` : "/api/storage";
@@ -36,24 +44,30 @@ export const useFileStore = create<FileStore>((set, get) => ({
 
         // will not update the state if it already exists
         if(key in baseFiles){
+            // TODO: REMOVE IN PROD
+            console.log("Key already exists, skipping content");
             return;
         }
 
-        const newFiles = await fetchApi<Array<File>>(route);
+        try{
+            const newFiles = await fetchApi<Array<File>>(route);
 
-        set(state => ({state, files: {key: newFiles.output}}));
-        // TODO: remove this or something idk
-        console.log(get().files);
+            const newObj: Record<string, File[]> = {};
+            newObj[key] = newFiles.output;
+
+            set(state => ({state, files: {...state.files, ...newObj}}));
+            // TODO: remove this or something idk
+            console.debug(`New file store size: ${Object.keys(get().files).length}`);
+        }catch(e){
+            throw e;
+        }
     },
     updateFiles: () => {},
-    /**
-     * Retrieves the files based on the parentID.
-     * @param parentID The parentID of the files, this can be null indicating it is the root folder
-     * @returns The array of the files related to the parentID
-     */
     getFiles: (parentID?: string) => {
+        // TODO: log properly
         const files = get().files;
         const key = parentID ? parentID : ROOT_KEY;
+        console.debug(`Parent ID: ${key}`);
 
         return files[key];
     }
