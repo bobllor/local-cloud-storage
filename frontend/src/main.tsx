@@ -26,9 +26,11 @@ const router = createBrowserRouter([
       {
         path: "storage",
         element: <App />,
+        // TODO: fix this middleware
         middleware: [authMiddleware],
         children: [
           {index: true, loader: getUserContext, element: <StorageHome />},
+          {path: "folder/:folderId", loader: getUserContext, element: <StorageHome />}
         ]
       },
     ]
